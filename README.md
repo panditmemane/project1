@@ -16,6 +16,8 @@ Project Build and deploye
 
 ## Docker Guidelines
 
+
+
 ### To Run the Isomorphic React Dashboard with Docker:
 
 - docker build -t isomorphic/dashboard -f ./packages/isomorphic/Dockerfile .
