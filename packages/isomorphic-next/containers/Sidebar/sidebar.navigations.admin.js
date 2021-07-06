@@ -1,0 +1,100 @@
+export default [
+  {
+    key: '/admin/dashboard',
+    label: 'sidebar.admin.dashboard',
+    leftIcon: 'ion-home',
+    withoutDashboard: true,
+  },
+  {
+    key: '/admin/approvals',
+    label: 'sidebar.admin.approvals',
+    leftIcon: 'ion-android-checkbox-outline',
+    withoutDashboard: true,
+  },
+  {
+    key: '/admin/manage-job-post/temporary',
+    label: 'sidebar.admin.manageJobPost(T)',
+    leftIcon: 'ion-speakerphone',
+    withoutDashboard: true,
+  },
+  {
+    key: '/admin/manage-job-post/permanent',
+    label: 'sidebar.admin.manageJobPost(P)',
+    leftIcon: 'ion-speakerphone',
+    withoutDashboard: true,
+  },
+  {
+    key: '/admin/manage-trainees',
+    label: 'sidebar.admin.manageTrainees',
+    leftIcon: 'ion-person-stalker',
+    withoutDashboard: true,
+  },
+  {
+    key: '/admin/reports',
+    label: 'sidebar.admin.reports',
+    leftIcon: 'ion-stats-bars',
+    withoutDashboard: true,
+  },
+  {
+    key: '/admin/admin-section',
+    label: 'sidebar.admin.adminSection',
+    leftIcon: 'ion-gear-b',
+    children: [
+      {
+        key: '/admin/admin-section/department',
+        label: 'sidebar.admin.adminSection.department',
+        leftIcon: 'ion-gear-b',
+        withoutDashboard: true,
+      },
+      {
+        key: '/admin/admin-section/document-master',
+        label: 'sidebar.admin.adminSection.documentMaster',
+        leftIcon: 'ion-gear-b',
+        withoutDashboard: true,
+      },
+      {
+        key: '/admin/admin-section/information-master',
+        label: 'sidebar.admin.adminSection.informationMaster',
+        leftIcon: 'ion-gear-b',
+        withoutDashboard: true,
+      },
+      {
+        key: '/admin/admin-section/neeri-users',
+        label: 'sidebar.admin.adminSection.neeriUsers',
+        leftIcon: 'ion-gear-b',
+        withoutDashboard: true,
+      },
+      {
+        key: '/admin/admin-section/position-master/permanent',
+        label: 'sidebar.admin.adminSection.positionMaster(P)',
+        leftIcon: 'ion-speakerphone',
+        withoutDashboard: true,
+      },
+      {
+        key: '/admin/admin-section/position-master/temporary',
+        label: 'sidebar.admin.adminSection.positionMaster(T)',
+        leftIcon: 'ion-speakerphone',
+        withoutDashboard: true,
+      },
+      {
+        key: '/admin/admin-section/qualification-master',
+        label: 'sidebar.admin.adminSection.qualificationMaster',
+        leftIcon: 'ion-gear-b',
+        withoutDashboard: true,
+      },
+      {
+        key: '/admin/admin-section/template-master',
+        label: 'sidebar.admin.adminSection.templateMaster',
+        leftIcon: 'ion-gear-b',
+        withoutDashboard: true,
+      },
+      {
+        key: '/admin/admin-section/zonal',
+        label: 'sidebar.admin.adminSection.zonal',
+        leftIcon: 'ion-gear-b',
+        withoutDashboard: true,
+      },
+    ],
+    withoutDashboard: true,
+  },
+];
