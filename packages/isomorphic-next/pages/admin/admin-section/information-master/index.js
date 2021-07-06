@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Head from 'next/head';
-import { Space, Row, Col, Popconfirm, message } from 'antd';
+import { Space, Row, Col, Popconfirm, message, Input } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { EditTwoTone, DeleteTwoTone } from '@ant-design/icons';
 import Table from '@iso/components/uielements/table';
 import Button from '@iso/components/uielements/button';
@@ -17,53 +18,92 @@ import ManageJobPostStyles from '../../../../containers/Admin/ManageJobPost/Mana
 const InformationMaster = () => {
   const { client } = useAuthState();
   const { user } = useUser({});
-  const [searchList, setSearchList] = useState();
-  const [value, setValue] = useState('');
   const [informations, setInformations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const searchInputRef = useRef(null);
+  const [searchedColumn, setSearchedColumn] = useState('');
+  const [infoStatusFilters, setInfoStatusFilters] = useState([]);
   const { Column } = Table;
-
-  if (!user || !user.isLoggedIn) {
-    return null;
-  }
 
   useEffect(() => {
     const load = async () => {
       const response = await client.get('/document/info/');
       if (!response.data.isEmpty) {
-        const dataSource = response.data.map((res) => ({
+        const dataSource = response.data.map((res, index) => ({
           key: res.info_id,
+          sr_no: index + 1,
           info_name: res.info_name,
           info_type: res.info_type,
         }));
-        setSearchList(dataSource);
+        const info_types = response.data.map((res) => ({
+          text: res.info_type,
+          value: res.info_type,
+        }));
+        setInfoStatusFilters(info_types.filter((obj, id, a) => a.findIndex((t) => t.value === obj.value) === id));
         setInformations(dataSource);
         setLoading(false);
       }
     };
-    load();
-  }, []);
+    if (user && user.isLoggedIn) load();
+  }, [user, client]);
 
   const onConfirmDelete = async (id) => {
     await client.delete(`/document/info/${id}/ `);
     const data = informations.filter((information) => information.key !== id);
-    setSearchList(data);
     setInformations(data);
     message.success('Information Deleted Successfully');
   };
 
-  const handleSearch = (e) => {
-    setValue(e.target.value);
-    if (e.target.value.length > 0) {
-      const filteredData = informations.filter(
-        (entry) =>
-          entry.info_name.toLowerCase().includes(e.target.value) ||
-          entry.info_type.toLowerCase().includes(e.target.value)
-      );
-      setInformations(filteredData);
-    } else {
-      setInformations(searchList);
-    }
+  const getColumnSearchProps = (dataIndex) => ({
+    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+      <div style={{ padding: 8 }}>
+        <Input
+          ref={searchInputRef}
+          placeholder={`Search ${dataIndex}`}
+          value={selectedKeys[0]}
+          onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+          onPressEnter={() => handleSearch(selectedKeys, confirm, dataIndex)}
+          style={{ marginBottom: 8, display: 'block' }}
+        />
+        <Space>
+          <Button
+            type='primary'
+            onClick={() => handleSearch(selectedKeys, confirm, dataIndex)}
+            icon={<SearchOutlined />}
+            size='small'
+            style={{ width: 90 }}
+          >
+            Search
+          </Button>
+          <Button onClick={() => handleReset(clearFilters)} size='small' style={{ width: 90 }}>
+            Reset
+          </Button>
+          <Button
+            type='link'
+            size='small'
+            onClick={() => {
+              confirm({ closeDropdown: false });
+              setSearchedColumn(dataIndex);
+            }}
+          >
+            Filter
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered) => <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />,
+    onFilter: (value, record) =>
+      record[dataIndex] ? record[dataIndex].toString().toLowerCase().includes(value.toLowerCase()) : '',
+    render: (text) => (searchedColumn === dataIndex ? <div>{text ? text.toString() : ''}</div> : text),
+  });
+
+  const handleSearch = (selectedKeys, confirm, dataIndex) => {
+    confirm();
+    setSearchedColumn(dataIndex);
+  };
+
+  const handleReset = (clearFilters) => {
+    clearFilters();
   };
 
   return (
@@ -80,15 +120,7 @@ const InformationMaster = () => {
               <Space direction='vertical' style={{ width: '100%' }}>
                 <PageHeader>Information List</PageHeader>
                 <Row className='action-bar'>
-                  <Col span={12}>
-                    <InputSearch
-                      placeholder='Search Information & Type'
-                      style={{ width: '100%' }}
-                      value={value}
-                      onChange={(e) => handleSearch(e)}
-                    />
-                  </Col>
-                  <Col span={12}>
+                  <Col span={24}>
                     <Row justify='end'>
                       <Row span={12}>
                         <Link href='/admin/admin-section/information-master/add'>
@@ -102,17 +134,31 @@ const InformationMaster = () => {
                   <Row>
                     <Col span={24}>
                       <Table dataSource={informations}>
-                        <Column title='Sr.No.' key='index' render={(text, record, index) => index + 1} />
-                        <Column title='Information Name' dataIndex='info_name' key='info_name' />
-                        <Column title='Information Type' dataIndex='info_type' key='info_type' />
+                        <Column title='Sr.No.' key='sr_no' dataIndex='sr_no' />
+                        <Column
+                          title='Information Name'
+                          dataIndex='info_name'
+                          key='info_name'
+                          sorter={(a, b) => a.info_name.length - b.info_name.length}
+                          {...getColumnSearchProps('info_name')}
+                        />
+                        <Column
+                          title='Information Type'
+                          key='info_type'
+                          dataIndex='info_type'
+                          filters={infoStatusFilters}
+                          onFilter={(value, record) => record.info_type.indexOf(value) === 0}
+                        />
                         <Column
                           title='Action'
                           key='action'
                           width='5%'
                           render={(text, record) => (
                             <Space size='middle'>
-                              <Link href={`/admin/admin-section/information-master/edit?id=${record.key}`}>
-                                <EditTwoTone />
+                              <Link href={`/admin/admin-section/information-master/edit/${record.key}`}>
+                                <a href={`/admin/admin-section/information-master/edit/${record.key}`}>
+                                  <EditTwoTone />
+                                </a>
                               </Link>
                               <Popconfirm
                                 title='Are you sure to delete this Information?'

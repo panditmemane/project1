@@ -24,8 +24,8 @@ const ForgotPasswordForm = () => {
 
   const onSubmit = async (values) => {
     try {
-      const response = await client.post('/user/forgot-password/', values);
-      const msg = response.data.messege;
+      const response = await client.post('/user/forgot_password/', values);
+      const msg = response.data.message;
       message.warning(msg);
       router.push('/');
     } catch (error) {}

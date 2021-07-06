@@ -44,8 +44,8 @@ const Add = () => {
             <PageHeader>Add Qualification </PageHeader>
             <Box>
               <Form name='formStep1' onFinish={onFormSubmit} initialValues={{}} scrollToFirstError>
-                <Row gutter={[16, 0]}>
-                  <Col span={24}>
+                <Row gutter={[16, 0]} justify='space-around'>
+                  <Col span={14}>
                     <Form.Item
                       name='qualification'
                       label='Qualification'
@@ -60,7 +60,7 @@ const Add = () => {
                       <Input placeholder='Enter Qualification' maxLength='100' type='text' />
                     </Form.Item>
                   </Col>
-                  <Col span={24}>
+                  <Col span={14}>
                     <Form.Item
                       name='short_code'
                       label='Short Code'

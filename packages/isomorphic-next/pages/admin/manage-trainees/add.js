@@ -2,37 +2,37 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import moment from 'moment';
 import LayoutContentWrapper from '@iso/components/utility/layoutWrapper';
 import DashboardLayout from '../../../containers/DashboardLayout/DashboardLayout';
 import FormStyles from '../../../styled/Form.styles';
 import PageHeader from '@iso/components/utility/pageHeader';
-import { Row, Col, Form, Input, Button, Space, DatePicker, message } from 'antd';
+import { Row, Col, Form, Input, Button, Space, DatePicker, message, Select } from 'antd';
 import Box from '@iso/components/utility/box';
 import { useAuthState } from '../../../src/components/auth/hook';
 import useUser from '../../../src/components/auth/useUser';
-import { Select } from 'antd';
 
 const config = {
   rules: [
     {
       type: 'object',
       required: true,
-      message: 'Please Select Date!',
+      message: 'Select Date',
     },
   ],
 };
 
 const statusAll = [
-  { value: 0, label: 'active' },
-  { value: 1, label: 'yet to join' },
-  { value: 2, label: 'completed' },
+  { value: 'active', label: 'Active' },
+  { value: 'yet to join', label: 'Yet to Join' },
+  { value: 'completed', label: 'Completed' },
 ];
-
+const { RangePicker } = DatePicker;
 const AddTrainee = () => {
   const router = useRouter();
   const { client } = useAuthState();
   const { user } = useUser({});
-  const [startDate, setStartDate] = useState();
+  const [startDate, setStartDate] = useState([moment(), moment()]);
   const [endDate, setEndDate] = useState();
   const [division, setDiv] = useState({});
   const [mentors, setMntrs] = useState({});
@@ -61,7 +61,6 @@ const AddTrainee = () => {
   }, []);
 
   const onFormSubmit = async (values) => {
-    console.log(values, division, mentors, status, values['emp_start_date'].format('YYYY-MM-DD'));
     await client.post(`/user/trainee/`, {
       trainee_name: values.trainee_name,
       email: values.email,
@@ -69,32 +68,15 @@ const AddTrainee = () => {
       division: division,
       mentor: mentors,
       status: status,
-      emp_start_date: values['emp_start_date'].format('YYYY-MM-DD'),
-      emp_end_date: values['emp_end_date'].format('YYYY-MM-DD'),
+      emp_start_date: values['emp_start_date'][0].format('YYYY-MM-DD'),
+      emp_end_date: values['emp_start_date'][1].format('YYYY-MM-DD'),
     });
     message.success('Trainee Added Successfully');
     router.push('/admin/manage-trainees');
   };
 
-  const normFile = (e) => {
-    console.log('Upload event:', e);
-    if (Array.isArray(e)) {
-      return e;
-    }
-    return e && e.fileList;
-  };
-
-  if (!user || !user.isLoggedIn) {
-    return null;
-  }
-
   const dateChangeHandler = (date, dateString) => {
-    //console.log(date, dateString);
     setStartDate(date);
-    setDateString(dateString);
-  };
-
-  const endDateChangeHandler = (date, dateString) => {
     setEndDate(date);
     setDateString(dateString);
   };
@@ -110,8 +92,12 @@ const AddTrainee = () => {
   };
 
   const handleStatusChange = (value, obj) => {
-    setStatus(obj.name);
+    setStatus(value);
   };
+
+  if (!user || !user.isLoggedIn) {
+    return null;
+  }
 
   return (
     <>
@@ -121,7 +107,7 @@ const AddTrainee = () => {
       <DashboardLayout>
         <LayoutContentWrapper>
           <FormStyles>
-            <PageHeader>Add/Update Trainee</PageHeader>
+            <PageHeader>Add Trainee</PageHeader>
             <Box>
               <Form name='formStep1' onFinish={onFormSubmit} scrollToFirstError>
                 <Row gutter={[16, 0]}>
@@ -137,17 +123,18 @@ const AddTrainee = () => {
                         },
                       ]}
                     >
-                      <Input />
+                      <Input placeholder='Enter Trainee Name' />
                     </Form.Item>
                   </Col>
                   <Col span={12}>
                     <Form.Item
+                      name='division'
                       label='Department'
                       labelCol={{ span: 24 }}
                       rules={[
                         {
                           required: true,
-                          message: 'Enter Department',
+                          message: 'Select Department',
                         },
                       ]}
                     >
@@ -162,12 +149,13 @@ const AddTrainee = () => {
                   </Col>
                   <Col span={12}>
                     <Form.Item
+                      name='mentor'
                       label='Mentor'
                       labelCol={{ span: 24 }}
                       rules={[
                         {
                           required: true,
-                          message: 'Enter Mentor',
+                          message: 'Select Mentor',
                         },
                       ]}
                     >
@@ -190,9 +178,13 @@ const AddTrainee = () => {
                           required: true,
                           message: 'Enter Email',
                         },
+                        {
+                          type: 'email',
+                          message: 'Please enter valid email',
+                        },
                       ]}
                     >
-                      <Input />
+                      <Input placeholder='Enter Email' />
                     </Form.Item>
                   </Col>
                   <Col span={12}>
@@ -205,26 +197,51 @@ const AddTrainee = () => {
                           required: true,
                           message: 'Enter Mobile No',
                         },
+                        {
+                          min: 10,
+                          max: 10,
+                          message: 'Please enter valid mobile no.',
+                        },
                       ]}
                     >
-                      <Input />
+                      <Input placeholder='Enter Mobile No' type='number' />
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item name='emp_start_date' label='Employee Start Date' labelCol={{ span: 24 }} {...config}>
-                      <DatePicker format='YYYY-MM-DD' value={startDate} onChange={dateChangeHandler} />
+                    <Form.Item
+                      name='emp_start_date'
+                      label='Employee Start Date - Employee End Date'
+                      labelCol={{ span: 24 }}
+                      rules={[
+                        {
+                          required: true,
+                          message: 'Select Date',
+                        },
+                      ]}
+                    >
+                      <RangePicker format='YYYY-MM-DD' value={startDate} onChange={dateChangeHandler} separator='-' />
                     </Form.Item>
                   </Col>
-                  <Col span={12}>
+                  {/* <Col span={12}>
                     <Form.Item name='emp_end_date' label='Employee End Date' labelCol={{ span: 24 }} {...config}>
                       <DatePicker format='YYYY-MM-DD' value={endDate} onChange={endDateChangeHandler} />
                     </Form.Item>
-                  </Col>
+                  </Col> */}
                   <Col span={12}>
-                    <Form.Item label='Status' labelCol={{ span: 24 }}>
+                    <Form.Item
+                      name='status'
+                      label='Status'
+                      labelCol={{ span: 24 }}
+                      rules={[
+                        {
+                          required: true,
+                          message: 'Select Status',
+                        },
+                      ]}
+                    >
                       <Select placeholder='Select Status' onChange={handleStatusChange}>
                         {statusAll.map((status) => (
-                          <Option value={status.value} name={status.label}>
+                          <Option value={status.value} name={status.value}>
                             {status.label}
                           </Option>
                         ))}

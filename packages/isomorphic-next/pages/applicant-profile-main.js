@@ -65,7 +65,6 @@ const ApplicantProfile = () => {
       <DashboardLayout>
         <LayoutContentWrapper>
           <Box>
-            <PercentageComplete currentStep={current} />
             <Row>
               <Col span={24}>
                 <Steps current={current} size='small' labelPlacement='vertical'>
@@ -75,6 +74,7 @@ const ApplicantProfile = () => {
                 </Steps>
               </Col>
             </Row>
+            <PercentageComplete currentStep={current} />
           </Box>
           {current === 0 && <Personal onSuccess={onSuccessPersonalForm} onNext={onNext} />}
           {current === 1 && <Address onSuccess={onSuccessAddressForm} onNext={onNext} onPrevious={onPrevious} />}

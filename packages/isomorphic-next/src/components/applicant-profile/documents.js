@@ -12,26 +12,34 @@ const Documents = ({ onNext, onPrevious }) => {
   const [form] = Form.useForm();
   const { client } = useAuthState();
   const { user } = useUser({});
-  const [initialData, setInitialData] = useState({ documents: [{}] });
+  const [initialData, setInitialData] = useState();
   const [documents, setDocuments] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     const load = async () => {
-      const response = await client.get(`/document/doc_list/`);
-      console.log(response.data);
-      // setInitialData({
-      //   ...(response.data.isEmpty && response.data.isEmpty === "true"
-      //     ? { documents_attachments: [] }
-      //     : { documents_attachments: response.data }),
-      // });
+      const response = await client.get(`/user/public/documents/${user.user_id}/`);
+      setInitialData({
+        ...(response.data.length === 0 ? { documents_attachments: [{}] } : { documents_attachments: response.data }),
+      });
+      if (!response.data.isEmpty && response.data.isEmpty !== 'true') {
+        setDocuments(response.data.map((res) => ({ doc_id: res.doc_id, doc_file_path: res.doc_file_path })));
+      }
     };
     if (user && user.isLoggedIn) load();
   }, [user, client]);
 
   const onSubmitForm = async (values) => {
     try {
-      console.log('Received values of form: ', values);
+      await client.post(
+        `/user/public/documents/${user.user_id}/`,
+        values.documents_attachments.map((data, index) => ({
+          doc_id: documents[index].doc_id,
+          doc_name: data.doc_name,
+          doc_file_path: documents[index].doc_file_path,
+        }))
+      );
+      message.success(`Published paper details added successfully.`);
       onNext();
       setShowConfirm(false);
     } catch (error) {
@@ -44,6 +52,8 @@ const Documents = ({ onNext, onPrevious }) => {
   }
 
   if (!initialData) return null;
+
+  console.log(initialData);
 
   return (
     <FormStyles>
@@ -61,14 +71,17 @@ const Documents = ({ onNext, onPrevious }) => {
                 {' '}
                 {fields.map((field, index) => (
                   <>
+                    <Form.Item {...field} name={[field.name, 'id']} fieldKey={[field.fieldKey, 'id']}>
+                      <Input type='hidden' />
+                    </Form.Item>
                     <Row gutter={[16, 0]}>
                       <Col span={8}>
                         <Form.Item
                           {...field}
                           label='Document Title'
                           labelCol={{ span: 24 }}
-                          name={[field.name, 'paper_title']}
-                          fieldKey={[field.fieldKey, 'paper_title']}
+                          name={[field.name, 'doc_name']}
+                          fieldKey={[field.fieldKey, 'doc_name']}
                           rules={[{ required: true, message: 'Please enter title' }]}
                         >
                           <Input />
@@ -79,16 +92,14 @@ const Documents = ({ onNext, onPrevious }) => {
                           {...field}
                           label='File'
                           labelCol={{ span: 24 }}
-                          name={[field.name, 'published_file']}
-                          fieldKey={[field.fieldKey, 'published_file']}
-                          //getValueFromEvent={normFile}
-                          //valuePropName='fileList'
+                          name={[field.name, 'doc_file_path']}
+                          fieldKey={[field.fieldKey, 'doc_file_path']}
                           rules={[{ required: true, message: 'Please upload' }]}
                         >
                           <Upload
                             listType='file'
                             showUploadList={false}
-                            action={`${process.env.NEXT_PUBLIC_BASE_API_URL}/user/public/file_upload/?doc_type=paper_attachment&user_id=${user.user_id}`}
+                            action={`${process.env.NEXT_PUBLIC_BASE_API_URL}/user/public/file_upload/?doc_type=applicant&user_id=${user.user_id}`}
                             headers={{
                               authorization: `Token ${localStorage.getItem('token')}`,
                             }}
@@ -103,24 +114,16 @@ const Documents = ({ onNext, onPrevious }) => {
                               }
                             }}
                             onSuccess={(data) => {
-                              //setDocuments(data);
                               const newDocs = [...documents];
-                              newDocs[index] = [
-                                {
-                                  doc_id: data.doc_id,
-                                  doc_file_path: data.doc_file_path,
-                                  doc_name: data.doc_name,
-                                },
-                              ];
-
-                              console.log('newDocs', { ...newDocs });
+                              newDocs[index] = { doc_id: data.doc_id, doc_file_path: data.doc_file_path };
                               setDocuments(newDocs);
                             }}
                           >
                             <Button icon={<UploadOutlined />}>
-                              {' '}
-                              {documents[index] && documents[index][0]?.doc_name
-                                ? documents[index][0].doc_name
+                              {documents[index]
+                                ? documents[index].doc_file_path.split('/')[
+                                    documents[index].doc_file_path.split('/').length - 1
+                                  ]
                                 : 'Upload File'}{' '}
                             </Button>
                           </Upload>

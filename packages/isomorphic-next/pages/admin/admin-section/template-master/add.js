@@ -92,7 +92,13 @@ const Add = () => {
                         },
                       ]}
                     >
-                      <Select placeholder='Select Communication Type'>
+                      <Select
+                        placeholder='Select Communication Type'
+                        showSearch
+                        filterOption={(input, option) =>
+                          option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                        }
+                      >
                         {commtypes.map((commtypelist) => (
                           <Option value={commtypelist.communication_type}>{commtypelist.communication_type}</Option>
                         ))}
@@ -111,7 +117,13 @@ const Add = () => {
                         },
                       ]}
                     >
-                      <Select placeholder='Select Action Type'>
+                      <Select
+                        placeholder='Select Action Type'
+                        showSearch
+                        filterOption={(input, option) =>
+                          option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                        }
+                      >
                         {actiontypes.map((actiontypelist) => (
                           <Option value={actiontypelist.comm_action_type}>{actiontypelist.comm_action_type}</Option>
                         ))}

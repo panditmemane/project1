@@ -2,9 +2,9 @@ import styled from 'styled-components';
 import { palette } from 'styled-theme';
 import WithDirection from '@iso/lib/helpers/rtl';
 const WDComponentTitleWrapper = styled.h1`
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 500;
-  color: ${palette('secondary', 2)};
+  color: #069633;
   width: 100%;
   margin-right: 17px;
   margin-bottom: 30px;
@@ -21,10 +21,9 @@ const WDComponentTitleWrapper = styled.h1`
     content: '';
     width: 5px;
     height: 40px;
-    background-color: ${palette('secondary', 3)};
+    background-color: #069633;
     display: flex;
-    margin: ${(props) =>
-      props['data-rtl'] === 'rtl' ? '0 0 0 15px' : '0 15px 0 0'};
+    margin: ${(props) => (props['data-rtl'] === 'rtl' ? '0 0 0 15px' : '0 15px 0 0')};
   }
 
   &:after {
@@ -33,8 +32,7 @@ const WDComponentTitleWrapper = styled.h1`
     height: 1px;
     background-color: ${palette('secondary', 3)};
     display: flex;
-    margin: ${(props) =>
-      props['data-rtl'] === 'rtl' ? '0 15px 0 0' : '0 0 0 15px'};
+    margin: ${(props) => (props['data-rtl'] === 'rtl' ? '0 15px 0 0' : '0 0 0 15px')};
   }
 `;
 

@@ -30,11 +30,11 @@ export default class CustomDocument extends Document {
     return (
       <Html>
         <Head>
+          <meta charSet='utf-8' />
           <link rel='stylesheet' href='/static/css/ionicons.min.css' />
           <link rel='stylesheet' href='/static/css/global.css' />
           <link rel='icon' href='/static/image/favicon.png' type='image/png' sizes='16x16' />
           <link href='https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700' rel='stylesheet' async />
-          <link rel='stylesheet' href='https://unpkg.com/react-instantsearch-theme-algolia@4.0.0/style.min.css' />
           <link
             rel='stylesheet'
             href='https://unpkg.com/leaflet@1.3.4/dist/leaflet.css'

@@ -1,12 +1,12 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Head from 'next/head';
-import { Space, Row, Col, Popconfirm, Tag, message, Select } from 'antd';
+import { Space, Row, Col, Popconfirm, message, Input } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { EditTwoTone, DeleteTwoTone } from '@ant-design/icons';
 import Table from '@iso/components/uielements/table';
 import Button from '@iso/components/uielements/button';
 import PageHeader from '@iso/components/utility/pageHeader';
-import { InputSearch } from '@iso/components/uielements/input';
 import { useAuthState } from '../../../../src/components/auth/hook';
 import useUser from '../../../../src/components/auth/useUser';
 import LayoutContentWrapper from '@iso/components/utility/layoutWrapper';
@@ -17,23 +17,24 @@ import ManageJobPostStyles from '../../../../containers/Admin/ManageJobPost/Mana
 const ContentTemplateMaster = () => {
   const { client } = useAuthState();
   const { user } = useUser({});
-  const [value, setValue] = useState('');
-  const [searchList, setSearchList] = useState();
   const [templates, setTemplate] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [communicationLabel, setCommunicationLabel] = useState('');
-  const [activeLabel, setActiveLabel] = useState('');
-  const [subjectLabel, setSubjectLabel] = useState('');
-  const [comm_typeLabel, setComm_typeLabel] = useState('');
-  const [action_typeLabel, setaction_typeLabel] = useState('');
   const [commtypes, setCommtypes] = useState([]);
   const [actiontypes, setActiontypes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const searchInputRef = useRef(null);
+  const [searchedColumn, setSearchedColumn] = useState('');
+  const [actionStatusFilters, setActionStatusFilters] = useState([]);
+  const [commStatusFilters, setCommStatusFilters] = useState([]);
   const { Column } = Table;
 
   useEffect(() => {
     const load = async () => {
       const response = await client.get('/template/template_list/');
-      const dataSource = response.data.map((res) => ({
+      const commtype = await client.get('/template/template_type_list/');
+      const actiontype = await client.get('/template/template_action_type_list/');
+
+      const dataSource = response.data.map((res, index) => ({
+        sr_no: index + 1,
         key: res.communication_id,
         communication_name: res.communication_name,
         subject: res.subject,
@@ -42,91 +43,91 @@ const ContentTemplateMaster = () => {
         comm_type: res.comm_type.communication_type,
         is_active: res.is_active,
       }));
-      setSearchList(dataSource);
+
+      const acts = response.data.map((res) => ({
+        text: res.action_type.comm_action_type,
+        value: res.action_type.comm_action_type,
+      }));
+      const comms = response.data.map((res) => ({
+        text: res.comm_type.communication_type,
+        value: res.comm_type.communication_type,
+      }));
+      setActionStatusFilters(acts.filter((obj, id, a) => a.findIndex((t) => t.value === obj.value) === id));
+      setCommStatusFilters(comms.filter((obj, id, a) => a.findIndex((t) => t.value === obj.value) === id));
       setTemplate(dataSource);
       setLoading(false);
-    };
-    const load1 = async () => {
-      const commtype = await client.get('/template/template_type_list/');
-      const dataSource = commtype.data.map((res) => ({
+
+      const dataSource1 = commtype.data.map((res) => ({
         value: res.id,
         label: res.communication_type,
       }));
-      setCommtypes(dataSource);
-    };
-    const load2 = async () => {
-      const actiontype = await client.get('/template/template_action_type_list/');
-      const dataSource1 = actiontype.data.map((res) => ({
+      setCommtypes(dataSource1);
+
+      const dataSource2 = actiontype.data.map((res) => ({
         label: res.comm_action_type,
       }));
-      setActiontypes(dataSource1);
+      setActiontypes(dataSource2);
     };
-    load();
-    load1();
-    load2();
-  }, []);
+    if (user && user.isLoggedIn) load();
+  }, [user, client]);
 
   const onConfirmDelete = async (id) => {
     await client.delete(`/template/delete_template/${id}/ `);
     const data = templates.filter((template) => template.key !== id);
-    setSearchList(data);
     setTemplate(data);
     message.success('Template Deleted Successfully');
   };
 
-  if (!user || !user.isLoggedIn) {
-    return null;
-  }
+  const getColumnSearchProps = (dataIndex) => ({
+    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+      <div style={{ padding: 8 }}>
+        <Input
+          ref={searchInputRef}
+          placeholder={`Search ${dataIndex}`}
+          value={selectedKeys[0]}
+          onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+          onPressEnter={() => handleSearch(selectedKeys, confirm, dataIndex)}
+          style={{ marginBottom: 8, display: 'block' }}
+        />
+        <Space>
+          <Button
+            type='primary'
+            onClick={() => handleSearch(selectedKeys, confirm, dataIndex)}
+            icon={<SearchOutlined />}
+            size='small'
+            style={{ width: 90 }}
+          >
+            Search
+          </Button>
+          <Button onClick={() => handleReset(clearFilters)} size='small' style={{ width: 90 }}>
+            Reset
+          </Button>
+          <Button
+            type='link'
+            size='small'
+            onClick={() => {
+              confirm({ closeDropdown: false });
+              setSearchedColumn(dataIndex);
+            }}
+          >
+            Filter
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered) => <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />,
+    onFilter: (value, record) =>
+      record[dataIndex] ? record[dataIndex].toString().toLowerCase().includes(value.toLowerCase()) : '',
+    render: (text) => (searchedColumn === dataIndex ? <div>{text ? text.toString() : ''}</div> : text),
+  });
 
-  const handleSearch = (e) => {
-    setValue(e.target.value);
-    if (e.target.value.length > 0) {
-      const filteredData = templates.filter(
-        (entry) =>
-          entry.communication_name.toLowerCase().includes(e.target.value) ||
-          entry.subject.toLowerCase().includes(e.target.value)
-      );
-      setTemplate(filteredData);
-    } else {
-      setTemplate(searchList);
-    }
+  const handleSearch = (selectedKeys, confirm, dataIndex) => {
+    confirm();
+    setSearchedColumn(dataIndex);
   };
 
-  const handleFilter = async () => {
-    const res = await client.get(`/template/filter_template/?communication_name=${communicationLabel}
-    &subject=${subjectLabel}&comm_type__communication_type=${comm_typeLabel}
-    &action_type__comm_action_type=${action_typeLabel}&is_active=${activeLabel}`);
-    console.log(res);
-    const dataSource = res.data.map((res) => ({
-      key: res.communication_id,
-      communication_name: res.communication_name,
-      subject: res.subject,
-      body: res.body,
-      action_type: res.action_type.comm_action_type,
-      comm_type: res.comm_type.communication_type,
-      is_active: res.is_active,
-    }));
-    setSearchList(dataSource);
-    setTemplate(dataSource);
-  };
-
-  const handleCommChange = (value, obj) => {
-    setCommunicationLabel(obj.name);
-  };
-
-  const handleSubjectChange = (value, obj) => {
-    setSubjectLabel(obj.name);
-    handleFilter();
-  };
-
-  const handleCommtypeChange = (value, obj) => {
-    setComm_typeLabel(obj.name);
-    handleFilter();
-  };
-
-  const handleActionChange = (value, obj) => {
-    setaction_typeLabel(obj.name);
-    handleFilter();
+  const handleReset = (clearFilters) => {
+    clearFilters();
   };
 
   return (
@@ -143,15 +144,7 @@ const ContentTemplateMaster = () => {
               <Space direction='vertical' style={{ width: '100%' }}>
                 <PageHeader>Content Template List</PageHeader>
                 <Row className='action-bar'>
-                  <Col span={12}>
-                    <InputSearch
-                      placeholder='Search Template'
-                      style={{ width: '100%' }}
-                      value={value}
-                      onChange={(e) => handleSearch(e)}
-                    />
-                  </Col>
-                  <Col span={12}>
+                  <Col span={24}>
                     <Row justify='end'>
                       <Row span={12}>
                         <Link href='/admin/admin-section/template-master/add'>
@@ -161,70 +154,50 @@ const ContentTemplateMaster = () => {
                     </Row>
                   </Col>
                 </Row>
-                <Row className='action-bar' justify='space-between'>
-                  <Col span={4}>
-                    <Select style={{ width: '100%' }} placeholder='Select Communication' onChange={handleCommChange}>
-                      {templates.length > 0
-                        ? templates.map((temp) => (
-                            <Option value={temp.communication_id} name={temp.communication_name}>
-                              {temp.communication_name}
-                            </Option>
-                          ))
-                        : ''}
-                    </Select>
-                  </Col>
-                  <Col span={4}>
-                    <Select style={{ width: '100%' }} placeholder='Select Subject' onChange={handleSubjectChange}>
-                      {templates.length > 0
-                        ? templates.map((sub) => (
-                            <Option value={sub.communication_id} name={sub.subject}>
-                              {sub.subject}
-                            </Option>
-                          ))
-                        : ''}
-                    </Select>
-                  </Col>
-                  <Col span={4}>
-                    <Select style={{ width: '100%' }} placeholder='Select Comm-Type' onChange={handleCommtypeChange}>
-                      {commtypes.length > 0
-                        ? commtypes.map((comm) => (
-                            <Option value={comm.value} name={comm.label}>
-                              {comm.label}
-                            </Option>
-                          ))
-                        : ''}
-                    </Select>
-                  </Col>
-                  <Col span={4}>
-                    <Select style={{ width: '100%' }} placeholder='Select Action' onChange={handleActionChange}>
-                      {actiontypes.length > 0
-                        ? actiontypes.map((action) => (
-                            <Option value={action.communication_id} name={action.label}>
-                              {action.label}
-                            </Option>
-                          ))
-                        : ''}
-                    </Select>
-                  </Col>
-                </Row>
                 <ListingStyles>
                   <Row>
                     <Col span={24}>
                       <Table dataSource={templates}>
-                        <Column title='Sr.No.' key='index' render={(text, record, index) => index + 1} />
-                        <Column title='Name' dataIndex='communication_name' key='communication_name' />
-                        <Column title='Subject' dataIndex='subject' key='subject' />
-                        <Column title='Body' dataIndex='body' key='body' />
-                        <Column title='Action Type' dataIndex='action_type' key='action_type' />
-                        <Column title='Communication Type' dataIndex='comm_type' key='comm_type' />
+                        <Column title='Sr.No.' key='sr_no' dataIndex='sr_no' />
+                        <Column
+                          title='Name'
+                          dataIndex='communication_name'
+                          key='communication_name'
+                          sorter={(a, b) => a.communication_name.length - b.communication_name.length}
+                          {...getColumnSearchProps('communication_name')}
+                        />
+                        <Column
+                          title='Subject'
+                          dataIndex='subject'
+                          key='subject'
+                          sorter={(a, b) => a.subject.length - b.subject.length}
+                          {...getColumnSearchProps('subject')}
+                        />
+                        <Column title='Body' dataIndex='body' key='body' {...getColumnSearchProps('body')} />
+                        <Column
+                          title='Action Type'
+                          key='action_type'
+                          dataIndex='action_type'
+                          filters={actionStatusFilters}
+                          onFilter={(value, record) => record.action_type.indexOf(value) === 0}
+                        />
+                        <Column
+                          title='Communication Type'
+                          key='comm_type'
+                          dataIndex='comm_type'
+                          filters={commStatusFilters}
+                          onFilter={(value, record) => record.comm_type.indexOf(value) === 0}
+                        />
                         <Column
                           title='Action'
                           key='action'
                           width='5%'
                           render={(text, record) => (
                             <Space size='middle'>
-                              <Link href={`/admin/admin-section/template-master/edit?id=${record.key}`}>
-                                <EditTwoTone />
+                              <Link href={`/admin/admin-section/template-master/edit/${record.key}`}>
+                                <a href={`/admin/admin-section/template-master/edit/${record.key}`}>
+                                  <EditTwoTone />
+                                </a>
                               </Link>
                               <Popconfirm
                                 title='Are you sure to delete this Template?'

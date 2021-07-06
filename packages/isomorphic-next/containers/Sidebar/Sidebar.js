@@ -11,6 +11,14 @@ import SidebarMenu from './SidebarMenu';
 import SIDEBAR_MENU_OPTIONS_ADMIN from './sidebar.navigations.admin';
 import SIDEBAR_MENU_OPTIONS from './sidebar.navigations';
 import useUser from '../../src/components/auth/useUser';
+import {
+  ADMIN,
+  TRAINEE,
+  APPLICATION_SCRUTINY,
+  JOB_POSTING_T,
+  JOB_POSTING_P,
+  MANAGEMENT,
+} from '../../static/constants/userRoles';
 
 const Sidebar = (props) => {
   const { roles, user } = useUser({});
@@ -21,8 +29,13 @@ const Sidebar = (props) => {
   const { toggleOpenDrawer, changeOpenKeys, changeCurrent, toggleCollapsed } = appActions;
 
   useEffect(() => {
-    if (user && roles.includes('admin')) {
-      setSidebarRoutes(SIDEBAR_MENU_OPTIONS_ADMIN);
+    const allRoles = [ADMIN, TRAINEE, APPLICATION_SCRUTINY, JOB_POSTING_T, JOB_POSTING_P, MANAGEMENT];
+    if (user) {
+      allRoles.forEach((role) => {
+        if (roles.includes(role)) {
+          setSidebarRoutes(SIDEBAR_MENU_OPTIONS_ADMIN);
+        }
+      });
     }
   }, [user, roles]);
 
@@ -116,7 +129,13 @@ const Sidebar = (props) => {
             className='isoDashboardMenu'
           >
             {sidebarRoutes.map((option) => (
-              <SidebarMenu key={option.key} item={option} submenuColor={submenuColor} submenuStyle={submenuStyle} />
+              <SidebarMenu
+                key={option.key}
+                item={option}
+                submenuColor={submenuColor}
+                submenuStyle={submenuStyle}
+                userRoles={roles}
+              />
             ))}
           </Menu>
         </Scrollbars>

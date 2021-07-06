@@ -33,6 +33,11 @@ const FormStyles = styled.div`
   .ant-upload-list-item-progress {
     padding-left: 0;
   }
+  .rdw-editor-main {
+    border: 1px solid #f1f1f1;
+    padding: 0 10px;
+    min-height: 150px;
+  }
 `;
 
 export default WithDirection(FormStyles);

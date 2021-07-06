@@ -1,7 +1,7 @@
 export default {
   siteName: 'NEERI',
-  siteIcon: 'ion-flash',
-  footerText: `Neeri @ ${new Date().getFullYear()} Created by FindingPi`,
+  siteIcon: '',
+  footerText: `CSIR-NEERI Recruitment Portal © 2021`,
   enableAnimatedRoute: false,
   apiUrl: 'http://yoursite.com/api/',
   google: {

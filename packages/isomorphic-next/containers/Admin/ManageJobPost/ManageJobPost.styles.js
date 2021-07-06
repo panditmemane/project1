@@ -22,6 +22,10 @@ const ManageJobPostStyles = styled.div`
         height: 35px;
       }
     }
+    h3.ant-typography {
+      margin-bottom: 0;
+      color: #069633;
+    }
   }
 `;
 

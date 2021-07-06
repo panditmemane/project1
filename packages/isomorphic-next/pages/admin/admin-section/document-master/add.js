@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
@@ -15,19 +15,33 @@ import FormStyles from '../../../../styled/Form.styles';
 import { useAuthState } from '../../../../src/components/auth/hook';
 import useUser from '../../../../src/components/auth/useUser';
 
+const DocumentAll = [
+  { value: 'caste', label: 'Caste' },
+  { value: 'personal', label: 'Personal' },
+  { value: 'qualification', label: 'Qualification' },
+  { value: 'experience', label: 'Experience' },
+  { value: 'published papers', label: 'Published Papers' },
+  { value: 'others', label: 'Others' },
+];
+
 const Add = () => {
   const { client } = useAuthState();
   const { user } = useUser({});
   const router = useRouter();
+  const [doc_type, setDoc_type] = useState(false);
 
   const onFormSubmit = async (values) => {
     await client.post('/document/docs/', {
       ...values,
       doc_name: values.doc_name,
-      doc_type: values.doc_type,
+      doc_type: doc_type,
     });
     message.success('Document Added Successfully');
     router.push('/admin/admin-section/document-master');
+  };
+
+  const handleDocsChange = (value, obj) => {
+    setDoc_type(value);
   };
 
   if (!user || !user.isLoggedIn) {
@@ -73,14 +87,20 @@ const Add = () => {
                         },
                       ]}
                     >
-                      <Select placeholder='Select Document Type'>
-                        <Option value='caste'>Caste</Option>
-                        <Option value='personal'>Personal</Option>
-                        <Option value='qualification'>Qualification</Option>
-                        <Option value='experience'>Experience</Option>
-                        <Option value='published'>Published</Option>
-                        <Option value='papers'>Papers</Option>
-                        <Option value='others'>Others</Option>
+                      <Select
+                        placeholder='Select Document Type'
+                        showSearch
+                        optionFilterProp='children'
+                        onChange={handleDocsChange}
+                        filterOption={(input, option) =>
+                          option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                        }
+                      >
+                        {DocumentAll.map((docs) => (
+                          <Option value={docs.value} name={docs.value}>
+                            {docs.label}
+                          </Option>
+                        ))}
                       </Select>
                     </Form.Item>
                   </Col>

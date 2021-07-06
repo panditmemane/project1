@@ -66,6 +66,12 @@ const SignUpForm = () => {
             <a> Login</a>
           </Link>
         </span>
+        <span>
+          Redirect to Verify OTP ?
+          <Link href='/verifyotp'>
+            <a> VerifyOTP </a>
+          </Link>
+        </span>
       </div>
     </form>
   );

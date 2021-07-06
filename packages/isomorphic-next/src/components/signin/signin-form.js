@@ -39,7 +39,7 @@ const SignInForm = () => {
         roles: response.data.roles,
       },
     });
-    router.push('/dashboard');
+    router.push('/job-posts');
   };
 
   return (

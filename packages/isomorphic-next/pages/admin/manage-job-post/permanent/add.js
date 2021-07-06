@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { palette } from 'styled-theme';
 import { useRouter } from 'next/router';
+import moment from 'moment';
+import { EditorState } from 'draft-js';
 import { Row, Col, Form, Input, Button, DatePicker, Select, Upload, message, Typography } from 'antd';
 // Icons
 import { InboxOutlined, MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
@@ -11,6 +13,7 @@ import LayoutContentWrapper from '@iso/components/utility/layoutWrapper';
 // Components
 import Box from '@iso/components/utility/box';
 import PageHeader from '@iso/components/utility/pageHeader';
+import { Editor } from '../../../../src/helper';
 // Hooks / API Calls
 import { useAuthState } from '../../../../src/components/auth/hook';
 import useUser from '../../../../src/components/auth/useUser';
@@ -23,11 +26,11 @@ import {
   getQualificationJobHistory,
   getInformationRequired,
   getDocuments,
-  uploadFile,
 } from '../../../../src/apiCalls';
 // Styles
 import FormStyles from '../../../../styled/Form.styles';
 import ManageJobPostStyles from '../../../../containers/Admin/ManageJobPost/ManageJobPost.styles';
+import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
 
 const JobPostPermanentAdd = () => {
   const router = useRouter();
@@ -49,9 +52,11 @@ const JobPostPermanentAdd = () => {
   const [requiredDocuments, setRequiredDocuments] = useState([]);
   const [informationRequired, setInformationRequired] = useState([]);
   const [documentsUploaded, setDocumentsUploaded] = useState([]);
-  const [documentsUploadedRequired, setDocumentsUploadedRequired] = useState([]);
   const [step1, setStep1] = useState(true);
   const [step2, setStep2] = useState(false);
+  const [preDescState, setPreDescState] = useState(() => EditorState.createEmpty());
+  const [postDescState, setPostDescState] = useState(() => EditorState.createEmpty());
+
   const [formStep1] = Form.useForm();
   const [formStep2] = Form.useForm();
 
@@ -125,13 +130,11 @@ const JobPostPermanentAdd = () => {
       ...formStep1Values,
       publication_date: `${formStep1Values['publication_date'].format('YYYY-MM-DD')} 00:00:00`,
       end_date: `${formStep1Values['end_date'].format('YYYY-MM-DD')} 00:00:00`,
-      dept_id: '4ce9df38-fc8c-42f8-b4a4-da2479105474',
-      status: 'draft',
       job_type: 'Permanent',
-      // TODO: @pending from backend doc_file_path is missing in documents_required
-      // documents_required: documentsUploadedRequired,
       documents_required: [],
       documents_uploaded: documentsUploaded,
+      pre_ad_description: JSON.stringify(formStep1Values.pre_ad_description),
+      post_ad_description: JSON.stringify(formStep1Values.post_ad_description),
       ...values,
     };
 
@@ -148,34 +151,15 @@ const JobPostPermanentAdd = () => {
 
     if (data.messege === 'File uploaded successfully') {
       message.success(`${data.doc_name} file uploaded successfully.`);
-      newDocsUploaded.push({
-        doc_id: data.doc_id,
-        doc_file_path: data.doc_file_path,
-        doc_name: data.doc_name,
-      });
+      newDocsUploaded.push(data.doc_id);
     }
 
     setDocumentsUploaded(newDocsUploaded);
   };
 
-  const onSuccessDocumentsUploadedRequired = (data) => {
-    const newDocsUploaded = documentsUploadedRequired;
-
-    if (data.messege === 'File uploaded successfully') {
-      message.success(`${data.doc_name} file uploaded successfully.`);
-      newDocsUploaded.push({
-        doc_id: data.doc_id,
-        doc_file_path: data.doc_file_path,
-        doc_name: data.doc_name,
-      });
-    }
-
-    setDocumentsUploadedRequired(newDocsUploaded);
-  };
-
   // Handler for pre fill position values
   const handleOnChangePosition = (value, key, name) => {
-    const selectedPositionData = positions.filter((position) => position.perm_position_id === value);
+    const selectedPositionData = positions.filter((position) => position.perm_position_master.position_id === value);
     const fields = formStep2.getFieldsValue();
     const { manpower_positions } = fields;
 
@@ -195,10 +179,7 @@ const JobPostPermanentAdd = () => {
       (information) => information.info_id
     );
 
-    // manpower_positions[key] = {};
-    // TODO: make id dynamic
-    // manpower_positions[key].id = selectedPositionData[0].perm_position_master.position_id;
-    manpower_positions[key].id = 4;
+    manpower_positions[key].id = key;
     manpower_positions[key].position = selectedPositionData[0].perm_position_master.position_name;
     manpower_positions[key].max_age = selectedPositionData[0].perm_position_master.max_age;
     manpower_positions[key].min_age = selectedPositionData[0].perm_position_master.min_age;
@@ -216,13 +197,13 @@ const JobPostPermanentAdd = () => {
   return (
     <>
       <Head>
-        <title>Manage Job Post (P)</title>
+        <title>Create Permanent Jobs</title>
       </Head>
       <DashboardLayout>
         <LayoutContentWrapper>
           <ManageJobPostStyles>
             <FormStyles>
-              <PageHeader>Add Admin Job Posting</PageHeader>
+              <PageHeader>Create Permanent Jobs</PageHeader>
               {step1 && (
                 <Box>
                   <Form
@@ -236,7 +217,7 @@ const JobPostPermanentAdd = () => {
                       <Col span={24}>
                         <Form.Item
                           name='notification_title'
-                          label='Advertisement Title*'
+                          label='Advertisement Title'
                           labelCol={{ span: 24 }}
                           rules={[
                             {
@@ -251,7 +232,7 @@ const JobPostPermanentAdd = () => {
                       <Col span={6}>
                         <Form.Item
                           name='publication_date'
-                          label='Start Date*'
+                          label='Start Date'
                           labelCol={{ span: 24 }}
                           rules={[
                             {
@@ -260,13 +241,13 @@ const JobPostPermanentAdd = () => {
                             },
                           ]}
                         >
-                          <DatePicker format='YYYY/MM/DD' />
+                          <DatePicker format='YYYY/MM/DD' disabledDate={(d) => !d || d.isBefore(moment())} />
                         </Form.Item>
                       </Col>
                       <Col span={6}>
                         <Form.Item
                           name='end_date'
-                          label='End Date*'
+                          label='End Date'
                           labelCol={{ span: 24 }}
                           rules={[
                             {
@@ -275,13 +256,13 @@ const JobPostPermanentAdd = () => {
                             },
                           ]}
                         >
-                          <DatePicker format='YYYY/MM/DD' />
+                          <DatePicker format='YYYY/MM/DD' disabledDate={(d) => !d || d.isBefore(moment())} />
                         </Form.Item>
                       </Col>
                       <Col span={6}>
                         <Form.Item
                           name='zonal_lab_id'
-                          label='Select Zone*'
+                          label='Select Zone'
                           labelCol={{ span: 24 }}
                           rules={[
                             {
@@ -302,7 +283,7 @@ const JobPostPermanentAdd = () => {
                       <Col span={6}>
                         <Form.Item
                           name='division_id'
-                          label='Select Division*'
+                          label='Select Division'
                           labelCol={{ span: 24 }}
                           rules={[
                             {
@@ -336,28 +317,28 @@ const JobPostPermanentAdd = () => {
                         </Form.Item>
                       </Col>
                       <Col span={12}>
-                        <Form.Item
-                          name='ad_approval_id'
-                          label='Advertisement Approval ID'
-                          labelCol={{ span: 24 }}
-                          rules={[
-                            {
-                              required: true,
-                              message: 'Please Input Advertisement Approval ID',
-                            },
-                          ]}
-                        >
+                        <Form.Item name='ad_approval_id' label='Advertisement Approval ID' labelCol={{ span: 24 }}>
                           <Input />
                         </Form.Item>
                       </Col>
                       <Col span={12}>
-                        <Form.Item name='documents_uploaded' label='Advertisement Document*' labelCol={{ span: 24 }}>
+                        <Form.Item
+                          name='documents_uploaded'
+                          label='Advertisement Document'
+                          labelCol={{ span: 24 }}
+                          rules={[
+                            {
+                              required: true,
+                              message: 'Advertisement document require',
+                            },
+                          ]}
+                        >
                           <Dragger
-                            action={`${process.env.NEXT_PUBLIC_BASE_API_URL}/user/public/file_upload/?doc_type=job_docs`}
+                            accept='.pdf'
+                            action={`${process.env.NEXT_PUBLIC_BASE_API_URL}/user/public/file_upload/?doc_type=job_docs&name=advertisement`}
                             headers={{
                               authorization: `Token ${token}`,
                             }}
-                            multiple
                             onSuccess={onSuccessDocumentsUploaded}
                           >
                             <p className='ant-upload-drag-icon'>
@@ -368,14 +349,16 @@ const JobPostPermanentAdd = () => {
                         </Form.Item>
                       </Col>
                       <Col span={12}>
-                        <Form.Item name='documents_required' label='Additional Documents*' labelCol={{ span: 24 }}>
+                        <Form.Item name='additional_documents' label='Additional Documents' labelCol={{ span: 24 }}>
                           <Dragger
-                            action={`${process.env.NEXT_PUBLIC_BASE_API_URL}/user/public/file_upload/?doc_type=job_docs`}
+                            accept='.pdf'
+                            maxCount={1}
+                            multiple={false}
+                            action={`${process.env.NEXT_PUBLIC_BASE_API_URL}/user/public/file_upload/?doc_type=job_docs&name=additional`}
                             headers={{
                               authorization: `Token ${token}`,
                             }}
-                            multiple
-                            onSuccess={onSuccessDocumentsUploadedRequired}
+                            onSuccess={onSuccessDocumentsUploaded}
                           >
                             <p className='ant-upload-drag-icon'>
                               <InboxOutlined />
@@ -396,7 +379,7 @@ const JobPostPermanentAdd = () => {
                             },
                           ]}
                         >
-                          <TextArea placeholder='textarea with clear icon' allowClear rows={4} />
+                          <Editor editorState={preDescState} onEditorStateChange={setPreDescState} />
                         </Form.Item>
                       </Col>
                       <Col span={12}>
@@ -411,7 +394,7 @@ const JobPostPermanentAdd = () => {
                             },
                           ]}
                         >
-                          <TextArea placeholder='textarea with clear icon' allowClear rows={4} />
+                          <Editor editorState={postDescState} onEditorStateChange={setPostDescState} />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -443,8 +426,8 @@ const JobPostPermanentAdd = () => {
                                 <Col span={12}>
                                   <Form.Item
                                     {...restField}
-                                    name={[name, 'selectPosition']}
-                                    fieldKey={[fieldKey, 'selectPosition']}
+                                    name={[name, 'position_id']}
+                                    fieldKey={[fieldKey, 'position_id']}
                                     label='Select Position Name'
                                     labelCol={{ span: 24 }}
                                     rules={[
@@ -455,12 +438,15 @@ const JobPostPermanentAdd = () => {
                                     ]}
                                   >
                                     <Select
-                                      placeholder='Please select Position Name'
+                                      placeholder='Select Position Name'
                                       onChange={(value) => handleOnChangePosition(value, fieldKey, name)}
                                     >
                                       {positions &&
                                         positions.map((position) => (
-                                          <Option value={position.perm_position_id} key={position.perm_position_id}>
+                                          <Option
+                                            value={position.perm_position_master.position_id}
+                                            key={position.perm_position_master.position_id}
+                                          >
                                             {position.perm_position_master.position_name}
                                           </Option>
                                         ))}
@@ -472,7 +458,7 @@ const JobPostPermanentAdd = () => {
                                     {...restField}
                                     name={[name, 'position']}
                                     fieldKey={[fieldKey, 'position']}
-                                    label='Position Display Name*'
+                                    label='Position Display Name'
                                     labelCol={{ span: 24 }}
                                     rules={[
                                       {
@@ -482,42 +468,6 @@ const JobPostPermanentAdd = () => {
                                     ]}
                                   >
                                     <Input />
-                                  </Form.Item>
-                                </Col>
-                                <Col span={6}>
-                                  <Form.Item
-                                    {...restField}
-                                    name={[name, 'documents_required']}
-                                    fieldKey={[fieldKey, 'documents_required']}
-                                    label='Required Documents'
-                                    labelCol={{ span: 24 }}
-                                  >
-                                    <Select placeholder='Select'>
-                                      {requiredDocuments &&
-                                        requiredDocuments.map((documentItem) => (
-                                          <Option value={documentItem.doc_id} key={documentItem.doc_id}>
-                                            {documentItem.doc_name}
-                                          </Option>
-                                        ))}
-                                    </Select>
-                                  </Form.Item>
-                                </Col>
-                                <Col span={6}>
-                                  <Form.Item
-                                    {...restField}
-                                    name={[name, 'information_required']}
-                                    fieldKey={[fieldKey, 'information_required']}
-                                    label='Required Information'
-                                    labelCol={{ span: 24 }}
-                                  >
-                                    <Select placeholder='Select'>
-                                      {informationRequired &&
-                                        informationRequired.map((informationItem) => (
-                                          <Option value={informationItem.info_id} key={informationItem.info_id}>
-                                            {informationItem.info_name}
-                                          </Option>
-                                        ))}
-                                    </Select>
                                   </Form.Item>
                                 </Col>
                                 <Col span={6}>
@@ -542,7 +492,7 @@ const JobPostPermanentAdd = () => {
                                     <Input />
                                   </Form.Item>
                                 </Col>
-                                <Col span={6}>
+                                <Col span={4}>
                                   <Form.Item
                                     {...restField}
                                     name={[name, 'grade']}
@@ -553,7 +503,7 @@ const JobPostPermanentAdd = () => {
                                     <Input />
                                   </Form.Item>
                                 </Col>
-                                <Col span={6}>
+                                <Col span={4}>
                                   <Form.Item
                                     {...restField}
                                     name={[name, 'level']}
@@ -564,18 +514,15 @@ const JobPostPermanentAdd = () => {
                                     <Input />
                                   </Form.Item>
                                 </Col>
-                                <Col span={6}>
+                                <Col span={4}>
                                   <Form.Item
                                     {...restField}
                                     name={[name, 'monthly_emolements']}
                                     fieldKey={[fieldKey, 'monthly_emolements']}
-                                    label='Salary Amount'
-                                    labelCol={{ span: 24 }}
+                                    style={{ display: 'none' }}
                                   >
-                                    <Input disabled />
+                                    <Input type='hidden' />
                                   </Form.Item>
-                                </Col>
-                                <Col span={6}>
                                   <Form.Item
                                     {...restField}
                                     name={[name, 'number_of_vacancies']}
@@ -584,6 +531,42 @@ const JobPostPermanentAdd = () => {
                                     labelCol={{ span: 24 }}
                                   >
                                     <Input />
+                                  </Form.Item>
+                                </Col>
+                                <Col span={24}>
+                                  <Form.Item
+                                    {...restField}
+                                    name={[name, 'documents_required']}
+                                    fieldKey={[fieldKey, 'documents_required']}
+                                    label='Required Documents'
+                                    labelCol={{ span: 24 }}
+                                  >
+                                    <Select placeholder='Select' mode='multiple' allowClear>
+                                      {requiredDocuments &&
+                                        requiredDocuments.map((documentItem) => (
+                                          <Option value={documentItem.doc_id} key={documentItem.doc_id}>
+                                            {documentItem.doc_name}
+                                          </Option>
+                                        ))}
+                                    </Select>
+                                  </Form.Item>
+                                </Col>
+                                <Col span={24}>
+                                  <Form.Item
+                                    {...restField}
+                                    name={[name, 'information_required']}
+                                    fieldKey={[fieldKey, 'information_required']}
+                                    label='Required Information'
+                                    labelCol={{ span: 24 }}
+                                  >
+                                    <Select placeholder='Select' mode='multiple' allowClear>
+                                      {informationRequired &&
+                                        informationRequired.map((informationItem) => (
+                                          <Option value={informationItem.info_id} key={informationItem.info_id}>
+                                            {informationItem.info_name}
+                                          </Option>
+                                        ))}
+                                    </Select>
                                   </Form.Item>
                                 </Col>
                                 <Col span={24}>
@@ -637,6 +620,15 @@ const JobPostPermanentAdd = () => {
                                           </Option>
                                         ))}
                                     </Select>
+                                  </Form.Item>
+                                  <Form.Item
+                                    {...restField}
+                                    name={[name, 'allowance']}
+                                    fieldKey={[fieldKey, 'allowance']}
+                                    initialValue='hra'
+                                    style={{ display: 'none' }}
+                                  >
+                                    <Input type='hidden' />
                                   </Form.Item>
                                 </Col>
                               </Row>

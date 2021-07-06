@@ -1,8 +1,8 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import { useForm } from 'react-hook-form';
+import Link from 'next/link';
 import { yupResolver } from '@hookform/resolvers/yup';
-import Checkbox from '@iso/components/uielements/checkbox';
 import Button from '@iso/components/uielements/button';
 import IntlMessages from '@iso/components/utility/intlMessages';
 import { validationSchema } from './validations';
@@ -24,9 +24,7 @@ const SignInForm = () => {
   const router = useRouter();
 
   const onSubmit = async (values) => {
-    console.log(values);
     const response = await client.post('/user/neeri_login/', values);
-    console.log(response);
     window.localStorage.setItem('token', response.data.token);
     window.localStorage.setItem('user', JSON.stringify(response.data.user));
     window.localStorage.setItem('roles', JSON.stringify(response.data.roles));
@@ -56,9 +54,9 @@ const SignInForm = () => {
         </div>
 
         <div className='isoInputWrapper isoLeftRightComponent'>
-          <Checkbox>
-            <IntlMessages id='page.signInRememberMe' />
-          </Checkbox>
+          <Link href='/forgotpassword'>
+            <a> Forgot password</a>
+          </Link>
           <Button type='primary' htmlType='submit' disabled={isSubmitting} loading={isSubmitting}>
             <IntlMessages id='page.signInButton' />
           </Button>

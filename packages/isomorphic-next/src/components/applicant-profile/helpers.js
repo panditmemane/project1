@@ -29,8 +29,8 @@ export const mapAddressGetData = (local, permanent, father) => ({
   father_telephone_no: father.telephone_no,
   father_isEmpty: father.isEmpty || 'false',
 
-  is_permenant_address_same_as_local: false,
-  is_father_address_same_as_local: false,
+  is_permenant_address_same_as_local: local.is_permenant_address_same_as_local,
+  is_father_address_same_as_local: local.is_father_address_same_as_local,
 });
 
 export const mapLocalAddressPostData = (value, user_id) => ({

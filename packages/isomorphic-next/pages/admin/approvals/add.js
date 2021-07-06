@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
+import moment from 'moment';
 import { Row, Col, Form, Input, Button, Space, DatePicker, Select, message } from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import Table from '@iso/components/uielements/table';
@@ -27,40 +28,47 @@ const Add = () => {
   const [position, setPos] = useState({});
   const [posOptions, setPosition] = useState([]);
   const [value, setValue] = useState(false);
+  const [salary, setSalary] = useState(0);
   const { user } = useUser({});
   const router = useRouter();
-  const [fields, setFields] = useState([{}]);
+  const [fields, setFields] = useState([]);
+  const [totalEstimatedAmt, setEstimatedAmt] = useState(0);
+  const [formStep2] = Form.useForm();
+  const [formStep1] = Form.useForm();
 
-  const onFormSubmit2 = (values) => {
-    console.log(values);
-  };
   const onFormSubmit = async (values) => {
-    console.log(values, division, zonal, position);
+    const fields = formStep2.getFieldsValue();
+    const { users } = fields;
+    const manpower_data = users.map((item) => ({
+      position: item.position,
+      count: parseFloat(item.count),
+      salary: parseFloat(item.salary),
+      total_cost: parseFloat(item.total_cost),
+    }));
     await client.post('/job_posting/create_project_requirement/', {
-      ...values,
-      division: division,
-      zonal: zonal,
+      division_name: division,
+      zonal_lab: zonal,
       project_number: values.project_number,
       project_title: values.project_title,
-      project_start_date: values.project_start_date,
-      roject_end_date: values.roject_end_date,
-      position: position,
-      // manpower_position : [{ position_name: values.position_name, salary: values.salary, total_cost: values.total_cost, count: values.count }],
+      project_start_date: values.project_start_date ? moment(values.project_start_date).format('YYYY-MM-DD') : '-',
+      project_end_date: values.project_end_date ? moment(values.project_end_date).format('YYYY-MM-DD') : '-',
+      manpower_position: manpower_data,
       total_estimated_amount: values.total_estimated_amount,
       provisions_made: values.provisions_made,
       min_essential_qualification: values.min_essential_qualification,
       job_requirements: values.job_requirements,
       desired_qualification: values.desired_qualification,
+      status: values.status,
     });
-    message.success('Successfully Added');
-    router.push('/admin/admin-section/requirement-approval');
+    message.success('Approval added successfully!');
+    router.push('/admin/approvals');
   };
 
   useEffect(() => {
     const load = async () => {
       const response = await client.get('/job_posting/division_list_and_create/');
       const zonalLab = await client.get('/job_posting/zonal_lab_list_and_create/');
-      const positionData = await client.get('/job_posting/temporary_positions/ ');
+      const positionData = await client.get('/job_posting/temporary_positions/');
       const division = response.data.map((div) => ({
         value: div.division_id,
         label: div.division_name,
@@ -77,21 +85,11 @@ const Add = () => {
       setDivision(division);
       setZonal(zonal);
       setPosition(position);
-      console.log(positionData);
     };
     load();
   }, []);
 
-  if (!user || !user.isLoggedIn) {
-    return null;
-  }
-
-  // const onFinish = (values) => {
-  //   console.log('Received values of form:', values);
-  // };
-
   const onChangeRadio = (e) => {
-    console.log('radio checked', e.target.value);
     setValue(e.target.value);
   };
 
@@ -104,65 +102,75 @@ const Add = () => {
     const ZonalObj = { zonal_lab_id: value, zonal_lab_name: obj.name };
     setZon(ZonalObj);
   };
-  // children: "Position 1"
-  // fieldName: "position"
-  // key: null
-  // positionId: "c75e938f-918b-4a83-be73-ff5b53406673"
-  // positionName: "Position 1"
-  // rowIndex: 0
-  // salary: 2000
-  // value: null
-
-  //const [form] = Form.useForm('positions');
-  var formRef = React.createRef();
-  const handlePositionChange = (value, obj, salary) => {
-    formRef.current.setFieldsValue({
-      position: obj.positionId,
-      salary: obj.salary,
-      count: 10,
-      total_cost: obj.salary * 10,
-    });
-
-    // console.log(value)
-    // console.log(salary)
-    // console.log(obj)
-    // const PosObj = { temp_position_id: value, position_name: obj.children,
-    //   salary:obj.name,
-    //   // count:values.count,
-    //   // total_cost:values.total_cost
-    // };
-    // setPos(PosObj);
-  };
 
   const form2InitialValues = {
-    positions: [{ position: '', salary: '', count: '', total_cost: '' }],
+    manpower_positions: [{ position: '', count: 0, total_cost: 0 }],
   };
+  const handlePositionChange = (value, key, name) => {
+    const selectedPositionData = posOptions.filter((position) => position.value === value);
+    const fields = formStep2.getFieldsValue();
+    const { users } = fields;
+    // users[name].id = key;
+    users[name].position = selectedPositionData[0].value;
+    users[name].salary = selectedPositionData[0].salary;
+    formStep2.setFieldsValue({ users });
+  };
+
+  const handleSalaryChange = (value, key, name) => {
+    const fields = formStep2.getFieldsValue();
+    const { users } = fields;
+    let cost = users[name].count * parseFloat(value);
+    users[name].total_cost = cost.toString();
+    formStep2.setFieldsValue({ users });
+    let estimated_amt = 0;
+    for (let i = 0; i < users.length; i++) {
+      estimated_amt += parseInt(users[i].total_cost);
+      formStep1.setFieldsValue({ total_estimated_amount: estimated_amt });
+    }
+  };
+
+  const handleCountChange = (value, key, name) => {
+    const fields = formStep2.getFieldsValue();
+    const { users } = fields;
+    let cost = users[name].salary * parseFloat(value);
+    users[name].total_cost = cost.toString();
+    formStep2.setFieldsValue({ users });
+    let estimated_amt = 0;
+    for (let i = 0; i < users.length; i++) {
+      estimated_amt += parseInt(users[i].total_cost);
+      formStep1.setFieldsValue({ total_estimated_amount: estimated_amt });
+    }
+  };
+
+  if (!user || !user.isLoggedIn) {
+    return null;
+  }
 
   return (
     <>
       <Head>
-        <title>Create Approval</title>
+        <title>Add Approval</title>
       </Head>
       <DashboardLayout>
         <LayoutContentWrapper>
           <FormStyles>
-            <PageHeader>Create Approval</PageHeader>
+            <PageHeader>Add Approval</PageHeader>
             <Box>
-              <Form name='formStep1' onFinish={onFormSubmit} scrollToFirstError>
+              <Form form={formStep1} name='formStep1' onFinish={onFormSubmit} scrollToFirstError>
                 <Row gutter={[16, 0]}>
                   <Col span={12}>
                     <Form.Item
-                      //name='division_name'
-                      label='Division Name'
+                      name='division_name'
+                      label='Department Name'
                       labelCol={{ span: 24 }}
                       rules={[
                         {
                           required: true,
-                          message: 'Select Division Name',
+                          message: 'Select Department Name',
                         },
                       ]}
                     >
-                      <Select placeholder='Select Division Name' onChange={handleDivChange}>
+                      <Select placeholder='Select Department Name' onChange={handleDivChange}>
                         {divOptions.map((div) => (
                           <Option value={div.value} name={div.label}>
                             {div.label}
@@ -173,17 +181,17 @@ const Add = () => {
                   </Col>
                   <Col span={12}>
                     <Form.Item
-                      //  name='zonal_lab'
-                      label='Zonal Lab'
+                      name='zonal_lab'
+                      label='Zone'
                       labelCol={{ span: 24 }}
                       rules={[
                         {
                           required: true,
-                          message: 'Select Zonal Lab',
+                          message: 'Select Zone',
                         },
                       ]}
                     >
-                      <Select placeholder='Select Zonal Lab' onChange={handleZonalChange}>
+                      <Select placeholder='Select Zone' onChange={handleZonalChange}>
                         {zonalOptions.map((zon) => (
                           <Option value={zon.value} name={zon.label}>
                             {zon.label}
@@ -222,10 +230,10 @@ const Add = () => {
                       <Input placeholder='Enter Project Title' />
                     </Form.Item>
                   </Col>
-                  <Col span={12}>
+                  <Col span={8}>
                     <Form.Item
-                      name='startDate'
-                      label='Start Date*'
+                      name='project_start_date'
+                      label='Start Date'
                       labelCol={{ span: 24 }}
                       rules={[
                         {
@@ -234,13 +242,13 @@ const Add = () => {
                         },
                       ]}
                     >
-                      <DatePicker format='YYYY/MM/DD' />
+                      <DatePicker format='YYYY/MM/DD' disabledDate={(d) => !d || d.isBefore(moment())} />
                     </Form.Item>
                   </Col>
-                  <Col span={12}>
+                  <Col span={8}>
                     <Form.Item
-                      name='endDate'
-                      label='End Date*'
+                      name='project_end_date'
+                      label='End Date'
                       labelCol={{ span: 24 }}
                       rules={[
                         {
@@ -249,16 +257,39 @@ const Add = () => {
                         },
                       ]}
                     >
-                      <DatePicker format='YYYY/MM/DD' />
+                      <DatePicker format='YYYY/MM/DD' disabledDate={(d) => !d || d.isBefore(moment())} />
                     </Form.Item>
                   </Col>
+                  <Col span={8}>
+                    <Form.Item
+                      name='status'
+                      label='Select Status'
+                      labelCol={{ span: 24 }}
+                      rules={[
+                        {
+                          required: true,
+                          message: 'Select Status',
+                        },
+                      ]}
+                    >
+                      <Select placeholder='Select Status'>
+                        <Option value='draft'>DRAFT</Option>
+                        <Option value='submit'>SUBMIT</Option>
+                        <Option value='lock'>LOCK</Option>
+                        <Option value='suspended'>SUSPENDED</Option>
+                        <Option value='reject'>REJECT</Option>
+                        <Option value='cancel'>CANCEL</Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+
                   <Col span={24}>
                     <Form.Item label='Position'></Form.Item>
                     <Form
-                      name='positions'
-                      ref={formRef}
-                      onFinish={onFormSubmit}
+                      form={formStep2}
+                      name='formStep2'
                       initialValues={form2InitialValues}
+                      onFinish={onFormSubmit}
                       scrollToFirstError
                     >
                       <Form.List name='users'>
@@ -268,8 +299,8 @@ const Add = () => {
                               <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align='baseline'>
                                 <Form.Item
                                   {...restField}
-                                  name={[key, 'position']}
-                                  // fieldKey={[fieldKey, 'position']}
+                                  name={[name, 'position']}
+                                  fieldKey={[fieldKey, 'position']}
                                   labelCol={{ span: 24 }}
                                   rules={[
                                     {
@@ -278,15 +309,12 @@ const Add = () => {
                                     },
                                   ]}
                                 >
-                                  <Select placeholder='Please select Position Name' onChange={handlePositionChange}>
+                                  <Select
+                                    placeholder='Please select Position Name'
+                                    onChange={(value) => handlePositionChange(value, key, name)}
+                                  >
                                     {posOptions.map((pos, index) => (
-                                      <Option
-                                        positionId={pos.value}
-                                        positionName={pos.label}
-                                        salary={pos.salary}
-                                        rowIndex={key}
-                                        fieldName='position'
-                                      >
+                                      <Option value={pos.value} key={pos.value}>
                                         {pos.label}
                                       </Option>
                                     ))}
@@ -294,8 +322,8 @@ const Add = () => {
                                 </Form.Item>
                                 <Form.Item
                                   {...restField}
-                                  name={[key, 'salary']}
-                                  //fieldKey={[fieldKey, 'salary']}
+                                  name={[name, 'salary']}
+                                  fieldKey={[fieldKey, 'salary']}
                                   rules={[
                                     {
                                       required: true,
@@ -303,12 +331,16 @@ const Add = () => {
                                     },
                                   ]}
                                 >
-                                  <Input placeholder='Salary' />
+                                  <Input
+                                    placeholder='Salary'
+                                    type='number'
+                                    onChange={(e) => handleSalaryChange(e.target.value, key, name)}
+                                  />
                                 </Form.Item>
                                 <Form.Item
                                   {...restField}
-                                  name={[key, 'count']}
-                                  //fieldKey={[fieldKey, 'count']}
+                                  name={[name, 'count']}
+                                  fieldKey={[fieldKey, 'count']}
                                   rules={[
                                     {
                                       required: true,
@@ -316,14 +348,18 @@ const Add = () => {
                                     },
                                   ]}
                                 >
-                                  <Input placeholder='Enter Count' />
+                                  <Input
+                                    placeholder='Enter Count'
+                                    type='number'
+                                    onChange={(e) => handleCountChange(e.target.value, key, name)}
+                                  />
                                 </Form.Item>
                                 <Form.Item
-                                  name={[key, 'total_cost']}
-                                  //fieldKey={[fieldKey, 'total_cost']}
+                                  name={[name, 'total_cost']}
+                                  fieldKey={[fieldKey, 'total_cost']}
                                   rules={[{ required: true, message: 'Enter Cost' }]}
                                 >
-                                  <Input placeholder='Cost' />
+                                  <Input placeholder='Cost' type='number' />
                                 </Form.Item>
                                 <MinusCircleOutlined onClick={() => remove(name)} />
                               </Space>
@@ -341,12 +377,12 @@ const Add = () => {
                   <Col span={12}>
                     <Form.Item
                       name='provisions_made'
-                      label='Select Qualification*'
+                      label='Have Provisions been made in the Project*'
                       labelCol={{ span: 24 }}
                       rules={[
                         {
                           required: true,
-                          message: 'Select Qualification',
+                          message: 'Select have Provisions been made in the Project',
                         },
                       ]}
                     >
@@ -359,7 +395,7 @@ const Add = () => {
                   <Col span={12}>
                     <Form.Item>
                       <Form.Item
-                        name='total_estimate_cost'
+                        name='total_estimated_amount'
                         label='Total Cost'
                         labelCol={{ span: 20 }}
                         rules={[
@@ -376,31 +412,31 @@ const Add = () => {
                   <Col span={24}>
                     <Form.Item
                       name='min_essential_qualification'
-                      label='Subject Wise'
+                      label='Minimum Essential qualification (strictly as per guidelines) – Subject wise'
                       labelCol={{ span: 24 }}
                       rules={[
                         {
                           required: true,
-                          message: 'Enter Subject Wise',
+                          message: 'Enter Minimum Essential qualification (strictly as per guidelines) – Subject wise',
                         },
                       ]}
                     >
-                      <Input placeholder='Enter Subject Wise' />
+                      <Input placeholder='Enter Minimum Essential qualification(strictly as per guidelines) – Subject wise' />
                     </Form.Item>
                   </Col>
                   <Col span={24}>
                     <Form.Item
-                      name='job_requirement'
-                      label='Job Requirement'
+                      name='job_requirements'
+                      label='Job Requirements'
                       labelCol={{ span: 24 }}
                       rules={[
                         {
                           required: true,
-                          message: 'Enter Job Requirement',
+                          message: 'Enter Job Requirements',
                         },
                       ]}
                     >
-                      <Input placeholder='Enter Job Requirement' />
+                      <Input placeholder='Enter Job Requirements' />
                     </Form.Item>
                   </Col>
 

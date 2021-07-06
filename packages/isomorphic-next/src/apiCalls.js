@@ -82,6 +82,27 @@ export const createJobPost = async (client, request) => {
   return response.data;
 };
 
+// Update Job Post
+export const updateJobPost = async (client, request, id) => {
+  const response = await client.put(`/job_posting/detail/${id}/`, request);
+
+  return response.data;
+};
+
+// Delete Job Post
+export const deleteJobPost = async (client, request, id) => {
+  const response = await client.put(`/job_posting/detail/${id}/`, request);
+
+  return response.data;
+};
+
+// Get Job Post Details
+export const getJobPostDetails = async (client, id) => {
+  const response = await client.get(`/job_posting/detail/${id}/`);
+
+  return response.data;
+};
+
 export const uploadFile = async (client, request) => {
   const response = await client.post('/user/public/file_upload/?doc_type=job_docs', request);
   console.log('response', response);

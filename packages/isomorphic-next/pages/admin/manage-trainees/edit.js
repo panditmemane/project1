@@ -13,9 +13,9 @@ import { useAuthState } from '../../../src/components/auth/hook';
 import useUser from '../../../src/components/auth/useUser';
 
 const statusAll = [
-  { value: 0, label: 'active' },
-  { value: 1, label: 'yet to join' },
-  { value: 2, label: 'completed' },
+  { value: 'active', label: 'Active' },
+  { value: 'yet to join', label: 'Yet to Join' },
+  { value: 'completed', label: 'Completed' },
 ];
 
 const Edit = () => {
@@ -26,18 +26,22 @@ const Edit = () => {
   const [mentorOptions, setMentorList] = useState([]);
   const [divisions, setDivisionsAll] = useState([]);
   const [division, setDiv] = useState({});
-  const [startDate, setStartDate] = useState();
-  const [endDate, setEndDate] = useState();
+  const [rangeDate, setStartDate] = useState([moment(), moment()]);
   const [status, setStatus] = useState('');
   const [mentors, setMntrs] = useState({});
-  const [startStrDate, setStartStrDate] = useState('');
-  const [endStrDate, setEndStrDate] = useState('');
+  const [startStrDate, setStartStrDate] = useState([]);
+
+  const { RangePicker } = DatePicker;
 
   useEffect(() => {
     const { id } = router.query;
     const load = async () => {
       const response = await client.get(`/user/trainee/${id}/`);
-      setInitialState({ ...response.data });
+      setInitialState({
+        ...response.data,
+        emp_range_date: [moment(response.data.emp_start_date), moment(response.data.emp_end_date)],
+      });
+
       const div = {
         division_id: response.data.division.division_id,
         division_name: response.data.division.division_name,
@@ -64,11 +68,6 @@ const Edit = () => {
     if (id) load();
   }, []);
 
-  if (!user || !user.isLoggedIn) {
-    return null;
-  }
-  if (!initialState) return null;
-
   const onFormSubmit = async (values) => {
     await client.put(`/user/trainee/${router.query.id}/`, {
       trainee_name: values.trainee_name,
@@ -79,8 +78,8 @@ const Edit = () => {
       division: division,
       mentor: mentors,
       status: status !== '' ? status : initialState.status,
-      emp_start_date: startStrDate !== '' ? startStrDate : initialState.emp_start_date,
-      emp_end_date: endStrDate !== '' ? endStrDate : initialState.emp_end_date,
+      emp_start_date: values.emp_range_date[0].format('YYYY-MM-DD'),
+      emp_end_date: values.emp_range_date[1].format('YYYY-MM-DD'),
     });
     message.success('Trainee Updated Successfully');
     router.push('/admin/manage-trainees');
@@ -97,28 +96,28 @@ const Edit = () => {
   };
 
   const handleStatusChange = (value, obj) => {
-    setStatus(obj.name);
+    setStatus(value);
   };
 
   const handleStartDateChange = (date, dateString) => {
-    setStartDate(date);
-    setStartStrDate(dateString);
+    setStartDate([date[0], date[1]]);
+    setStartStrDate([dateString[0], dateString[1]]);
   };
 
-  const handleEndDateChange = (date, dateString) => {
-    setEndDate(date);
-    setEndStrDate(dateString);
-  };
+  if (!user || !user.isLoggedIn) {
+    return null;
+  }
+  if (!initialState) return null;
 
   return (
     <>
       <Head>
-        <title>Edit User</title>
+        <title>Update User</title>
       </Head>
       <DashboardLayout>
         <LayoutContentWrapper>
           <FormStyles>
-            <PageHeader>Add/Update User</PageHeader>
+            <PageHeader>Update User</PageHeader>
             <Box>
               <Form
                 name='formStep1'
@@ -144,9 +143,19 @@ const Edit = () => {
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item label='Department' name='division_id' labelCol={{ span: 24 }}>
+                    <Form.Item
+                      label='Department'
+                      name='division_id'
+                      labelCol={{ span: 24 }}
+                      initialValue={initialState.division.division_id}
+                      rules={[
+                        {
+                          required: true,
+                          message: 'Select Department',
+                        },
+                      ]}
+                    >
                       <Select
-                        defaultValue={initialState.division.division_id}
                         name={initialState.division.division_name}
                         placeholder='Select Department'
                         onChange={handleDivChange}
@@ -160,9 +169,19 @@ const Edit = () => {
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item name='mentor_id' label='Mentor' labelCol={{ span: 24 }}>
+                    <Form.Item
+                      name='mentor_id'
+                      label='Mentor'
+                      labelCol={{ span: 24 }}
+                      initialValue={initialState.mentor.mentor_id}
+                      rules={[
+                        {
+                          required: true,
+                          message: 'Select Mentor',
+                        },
+                      ]}
+                    >
                       <Select
-                        defaultValue={initialState.mentor.mentor_id}
                         name={initialState.mentor.mentor_name}
                         placeholder='Select Mentor'
                         onChange={handleMentorChange}
@@ -185,6 +204,10 @@ const Edit = () => {
                           required: true,
                           message: 'Enter Email',
                         },
+                        {
+                          type: 'email',
+                          message: 'Please enter valid email',
+                        },
                       ]}
                     >
                       <Input />
@@ -200,33 +223,43 @@ const Edit = () => {
                           required: true,
                           message: 'Enter Mobile No',
                         },
+                        {
+                          min: 10,
+                          max: 10,
+                          message: 'Please enter valid mobile no.',
+                        },
                       ]}
                     >
-                      <Input />
+                      <Input placeholder='Enter Mobile No' type='number' />
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item label='Employee Start Date' labelCol={{ span: 24 }}>
-                      <DatePicker
-                        value={startDate}
-                        defaultValue={moment(initialState.emp_start_date)}
-                        onChange={handleStartDateChange}
-                        format='YYYY-MM-DD'
-                      />
+                    <Form.Item
+                      label='Employee Start Date - Employee End Date'
+                      labelCol={{ span: 24 }}
+                      name='emp_range_date'
+                      rules={[
+                        {
+                          required: true,
+                          message: 'Select Date Range',
+                        },
+                      ]}
+                    >
+                      <RangePicker onChange={handleStartDateChange} seperator='-' format='YYYY-MM-DD' />
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item label='Employee End Date' labelCol={{ span: 24 }}>
-                      <DatePicker
-                        value={endDate}
-                        defaultValue={moment(initialState.emp_end_date)}
-                        onChange={handleEndDateChange}
-                        format='YYYY-MM-DD'
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item name='status' label='Status' labelCol={{ span: 24 }}>
+                    <Form.Item
+                      name='status'
+                      label='Status'
+                      labelCol={{ span: 24 }}
+                      rules={[
+                        {
+                          required: true,
+                          message: 'Select Status',
+                        },
+                      ]}
+                    >
                       <Select
                         defaultValue={initialState.status}
                         placeholder='Select Status'

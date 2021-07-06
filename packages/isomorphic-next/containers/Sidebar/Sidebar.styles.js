@@ -81,7 +81,32 @@ const SidebarWrapper = styled.div`
         margin: 0;
         height: 48px;
         border-right: 4px solid #fff;
+        background: #fff !important;
         &:hover {
+          border-right: 4px solid ${palette('primary', 0)};
+          background: ${palette('secondary', 13)};
+          a {
+            color: ${palette('primary', 0)} !important;
+          }
+          i {
+            color: ${palette('primary', 0)} !important;
+          }
+        }
+      }
+      .ant-menu-submenu-title {
+        &:hover {
+          border-right: 4px solid ${palette('primary', 0)};
+          background: ${palette('secondary', 13)};
+          a {
+            color: ${palette('primary', 0)} !important;
+          }
+          i {
+            color: ${palette('primary', 0)} !important;
+          }
+        }
+      }
+      .ant-menu-submenu:hover {
+        .ant-menu-submenu-title {
           border-right: 4px solid ${palette('primary', 0)};
           background: ${palette('secondary', 13)};
           a {
@@ -208,7 +233,7 @@ const SidebarWrapper = styled.div`
           ${transition()};
           &:hover {
             a {
-              color: #ffffff !important;
+              // color: #ffffff !important;
             }
           }
         }

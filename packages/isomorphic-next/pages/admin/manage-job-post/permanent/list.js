@@ -1,32 +1,34 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
-// import axios from 'axios';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import moment from 'moment';
+import Link from 'next/link';
 import { CSVLink } from 'react-csv';
+// import Highlighter from 'react-highlight-words';
 // Components
-import { Space, Row, Col } from 'antd';
+import { Space, Row, Col, Input, message, Popconfirm, Typography } from 'antd';
 import Table from '@iso/components/uielements/table';
 import Tag from '@iso/components/uielements/tag';
 import Button from '@iso/components/uielements/button';
-import { InputSearch } from '@iso/components/uielements/input';
 import LayoutContentWrapper from '@iso/components/utility/layoutWrapper';
 import { EditTwoTone, DeleteTwoTone } from '@ant-design/icons';
-import { DropdownButtons, DropdownMenu, MenuItem } from '@iso/components/uielements/dropdown';
 import DashboardLayout from '../../../../containers/DashboardLayout/DashboardLayout';
+import { SearchOutlined } from '@ant-design/icons';
 // Hooks / API Calls
 import { useAuthState } from '../../../../src/components/auth/hook';
 import useUser from '../../../../src/components/auth/useUser';
-import { getJobPostPermanent } from '../../../../src/apiCalls';
+import { deleteJobPost, getJobPostPermanent } from '../../../../src/apiCalls';
+import { jobStatus, jobStatusFilters } from '../../../../src/constants';
 // Styles
 import ListingStyles from '../../../../styled/Listing.styles';
 import ManageJobPostStyles from '../../../../containers/Admin/ManageJobPost/ManageJobPost.styles';
 
+import { JOB_POSTING_P, APPLICATION_SCRUTINY } from '../../../../static/constants/userRoles';
+
 const csvHeaders = [
   { label: 'Notification ID', key: 'notificationID' },
   { label: 'Title', key: 'title' },
-  { label: 'Department', key: 'department' },
   { label: 'Date of Opening', key: 'dateOfOpening' },
   { label: 'Date of Closing', key: 'dateOfClosing' },
   { label: 'Applied', key: 'applied' },
@@ -34,63 +36,125 @@ const csvHeaders = [
 ];
 
 const JobPostPermanent = () => {
-  // console.log('response', response);
   const { client } = useAuthState();
-  const { user } = useUser({});
+  const { roles, user } = useUser({});
   const router = useRouter();
+  const userRole = roles && roles.length ? roles : '';
+
+  const searchInputRef = useRef(null);
 
   const [jobPosts, setJobPostsData] = useState();
   const [csvData, setCsvDataData] = useState();
+  const [searchedColumn, setSearchedColumn] = useState('');
 
+  const { Title } = Typography;
   const { Column } = Table;
-  const DropdownButton = DropdownButtons;
+
+  const getJobPostList = useCallback(async () => {
+    const response = await getJobPostPermanent(client);
+    const filteredData = response.map((post, index) => ({
+      key: index,
+      jobPostID: post.job_posting_id,
+      notificationID: post.notification_id,
+      title: post.notification_title,
+      dateOfOpening: post.publication_date ? moment(post.publication_date).format('DD-MM-YYYY') : '-',
+      dateOfClosing: post.end_date ? moment(post.end_date).format('DD-MM-YYYY') : '-',
+      applied: post.applied_applicants,
+      status: post.status,
+    }));
+
+    const csvFilteredData = response.map((post) => ({
+      notificationID: post.notification_id,
+      title: post.notification_title,
+      dateOfOpening: post.publication_date ? moment(post.publication_date).format('DD-MM-YYYY') : '-',
+      dateOfClosing: post.end_date ? moment(post.end_date).format('DD-MM-YYYY') : '-',
+      applied: post.applied_applicants,
+      status: post.status,
+    }));
+
+    setJobPostsData(filteredData);
+    setCsvDataData(csvFilteredData);
+  }, []);
 
   useEffect(() => {
-    const load = async () => {
-      const response = await getJobPostPermanent(client);
-      const filteredData = response.map((post, index) => ({
-        key: index,
-        notificationID: post.notification_id,
-        title: post.notification_title,
-        department: post.department.dept_name,
-        dateOfOpening: post.publication_date ? moment(post.publication_date).format('DD-MM-YYYY') : '-',
-        dateOfClosing: post.end_date ? moment(post.end_date).format('DD-MM-YYYY') : '-',
-        // TODO: applied value static
-        applied: '344 Applications',
-        // TODO: require all status and color code
-        status: post.status,
-      }));
-
-      const csvFilteredData = response.map((post) => ({
-        notificationID: post.notification_id,
-        title: post.notification_title,
-        department: post.department.department ? post.department.department : '-',
-        dateOfOpening: post.publication_date ? moment(post.publication_date).format('DD-MM-YYYY') : '-',
-        dateOfClosing: post.end_date ? moment(post.end_date).format('DD-MM-YYYY') : '-',
-        // TODO: applied value static
-        applied: '344 Applications',
-        // TODO: require all status and color code
-        status: post.status,
-      }));
-
-      setJobPostsData(filteredData);
-      setCsvDataData(csvFilteredData);
-    };
-    if (user && user.isLoggedIn) load();
+    if (user && user.isLoggedIn) getJobPostList();
   }, [user, client]);
 
-  const menuClicked = (
-    <DropdownMenu>
-      <MenuItem key='1'>1st menu item</MenuItem>
-      <MenuItem key='2'>2nd menu item</MenuItem>
-      <MenuItem key='3'>3d menu item</MenuItem>
-    </DropdownMenu>
-  );
+  const deleteJobPostHandler = async (id) => {
+    console.log(id);
+    const formRequest = {
+      is_deleted: true,
+    };
+    const formResponse = await deleteJobPost(client, formRequest, id);
+    console.log(formResponse);
+
+    if (formResponse.is_deleted) {
+      message.success(`Job post deleted successfully.`);
+      getJobPostList();
+    }
+  };
+
+  const getColumnSearchProps = (dataIndex) => ({
+    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+      <div style={{ padding: 8 }}>
+        <Input
+          ref={searchInputRef}
+          placeholder={`Search ${dataIndex}`}
+          value={selectedKeys[0]}
+          onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+          onPressEnter={() => handleSearch(selectedKeys, confirm, dataIndex)}
+          style={{ marginBottom: 8, display: 'block' }}
+        />
+        <Space>
+          <Button
+            type='primary'
+            onClick={() => handleSearch(selectedKeys, confirm, dataIndex)}
+            icon={<SearchOutlined />}
+            size='small'
+            style={{ width: 90 }}
+          >
+            Search
+          </Button>
+          <Button onClick={() => handleReset(clearFilters)} size='small' style={{ width: 90 }}>
+            Reset
+          </Button>
+          <Button
+            type='link'
+            size='small'
+            onClick={() => {
+              confirm({ closeDropdown: false });
+              setSearchedColumn(dataIndex);
+            }}
+          >
+            Filter
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered) => <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />,
+    onFilter: (value, record) =>
+      record[dataIndex] ? record[dataIndex].toString().toLowerCase().includes(value.toLowerCase()) : '',
+    render: (text) =>
+      searchedColumn === dataIndex ? (
+        <div>{dataIndex === 'title' || 'notificationID' ? <a>{text.toString()}</a> : text.toString()}</div>
+      ) : (
+        <div>{dataIndex === 'title' || 'notificationID' ? <a>{text.toString()}</a> : text}</div>
+      ),
+  });
+
+  const handleSearch = (selectedKeys, confirm, dataIndex) => {
+    confirm();
+    setSearchedColumn(dataIndex);
+  };
+
+  const handleReset = (clearFilters) => {
+    clearFilters();
+  };
 
   return (
     <>
       <Head>
-        <title>Manage Job Post (P)</title>
+        <title>Manage Jobs (Permanent Jobs)</title>
       </Head>
       <DashboardLayout>
         <LayoutContentWrapper>
@@ -98,13 +162,13 @@ const JobPostPermanent = () => {
             <ListingStyles>
               <Row className='action-bar'>
                 <Col span={12}>
-                  <InputSearch placeholder='input search text' />
+                  <Title level={3} type='primary'>
+                    Manage Jobs (Permanent Jobs)
+                  </Title>
                 </Col>
                 <Col span={12}>
                   <Row justify='end'>
-                    <Col span={12}>
-                      <DropdownButton overlay={menuClicked}>Dropdown</DropdownButton>
-                    </Col>
+                    <Col span={12}></Col>
                     <Row span={12}>
                       {csvData && csvData.length > 0 && (
                         <CSVLink data={csvData} headers={csvHeaders}>
@@ -113,9 +177,11 @@ const JobPostPermanent = () => {
                           </Button>
                         </CSVLink>
                       )}
-                      <Button type='primary' onClick={() => router.push('/admin/manage-job-post/permanent/add')}>
-                        Add New
-                      </Button>
+                      {[JOB_POSTING_P].some((r) => userRole.indexOf(r) >= 0) && (
+                        <Button type='primary' onClick={() => router.push('/admin/manage-job-post/permanent/add')}>
+                          Add New
+                        </Button>
+                      )}
                     </Row>
                   </Row>
                 </Col>
@@ -123,21 +189,53 @@ const JobPostPermanent = () => {
               <Row>
                 <Col span={24}>
                   <Table dataSource={jobPosts}>
-                    <Column title='Sr.No' key='index' render={(text, record, index) => index + 1} />
-                    <Column title='Notification ID' dataIndex='notificationID' key='notificationID' />
-                    <Column title='Title' dataIndex='title' key='lastName' />
-                    <Column title='Department' dataIndex='department' key='department' />
-                    <Column title='Date of Opening' dataIndex='dateOfOpening' key='dateOfOpening' />
-                    <Column title='Date of Closing' dataIndex='dateOfClosing' key='dateOfClosing' />
+                    <Column
+                      title='Sr.No'
+                      key='key'
+                      dataIndex='key'
+                      sorter={(a, b) => a.key - b.key}
+                      render={(text, record) => record.key + 1}
+                    />
+                    <Column
+                      title='Notification ID'
+                      dataIndex='notificationID'
+                      key='notificationID'
+                      width='20%'
+                      sorter={(a, b) => a.notificationID.length - b.notificationID.length}
+                      {...getColumnSearchProps('notificationID')}
+                      onCell={(record) => {
+                        return {
+                          onClick: () => {
+                            router.push(`/admin/manage-job-post/details/${record.jobPostID}`);
+                          },
+                        };
+                      }}
+                    />
+                    <Column
+                      title='Title'
+                      dataIndex='title'
+                      key='title'
+                      width='35%'
+                      sorter={(a, b) => a.title.length - b.title.length}
+                      // render={(text, record) => <a>{record.title}</a>}
+                      {...getColumnSearchProps('title')}
+                      onCell={(record) => {
+                        return {
+                          onClick: () => {
+                            router.push(`/admin/manage-job-post/details/${record.jobPostID}`);
+                          },
+                        };
+                      }}
+                    />
+                    <Column title='Date of Opening' dataIndex='dateOfOpening' key='dateOfOpening' width='12%' />
+                    <Column title='Date of Closing' dataIndex='dateOfClosing' key='dateOfClosing' width='12%' />
                     <Column title='Applied' dataIndex='applied' key='applied' />
                     <Column
                       title='Status'
                       key='status'
-                      render={(text, record) => (
-                        <Tag className={`ant-tag-${record.status}`} key={record.status}>
-                          {record.status}
-                        </Tag>
-                      )}
+                      filters={jobStatusFilters}
+                      onFilter={(value, record) => record.status.indexOf(value) === 0}
+                      render={(text, record) => jobStatus[record.status]}
                     />
                     <Column
                       title='Action'
@@ -145,13 +243,33 @@ const JobPostPermanent = () => {
                       width='5%'
                       render={(text, record) => (
                         <Space size='middle'>
-                          <a>
-                            <EditTwoTone />
-                          </a>
-                          <a>
-                            {' '}
-                            <DeleteTwoTone />
-                          </a>
+                          {[JOB_POSTING_P].some((r) => userRole.indexOf(r) >= 0) && (
+                            <Link href={`/admin/manage-job-post/permanent/edit/${record.jobPostID}`}>
+                              <a href={`/admin/manage-job-post/permanent/edit/${record.jobPostID}`}>
+                                <EditTwoTone />
+                              </a>
+                            </Link>
+                          )}
+                          {[JOB_POSTING_P].some((r) => userRole.indexOf(r) >= 0) && (
+                            <Popconfirm
+                              title='Are you sure delete this task?'
+                              okText='Yes'
+                              cancelText='No'
+                              onConfirm={() => deleteJobPostHandler(record.jobPostID)}
+                            >
+                              <DeleteTwoTone />
+                            </Popconfirm>
+                          )}
+                          {[APPLICATION_SCRUTINY].some((r) => userRole.indexOf(r) >= 0) && (
+                            <Button
+                              type='text'
+                              onClick={() => {
+                                router.push(`/admin/manage-job-post/applicants/${record.jobPostID}`);
+                              }}
+                            >
+                              Applicants
+                            </Button>
+                          )}
                         </Space>
                       )}
                     />

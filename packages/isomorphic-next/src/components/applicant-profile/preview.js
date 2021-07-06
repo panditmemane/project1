@@ -69,16 +69,19 @@ const Preview = ({ onPrevious }) => {
             {initialData.skype_id}
           </Descriptions.Item>
           <Descriptions.Item label='Residential Address' span={3}>
-            {initialData.permanent_address?.address1},<br />
-            {initialData.permanent_address?.address2},<br />
-            {initialData.permanent_address?.address3},<br />
-            {initialData.permanent_address?.city}
+            {initialData.local_address?.address1}
+            <br />
+            {initialData.local_address?.address2}
+            <br />
+            {initialData.local_address?.address3}
+            <br />
+            {initialData.local_address?.city}
           </Descriptions.Item>
           <Descriptions.Item label='Permanent Address' span={3}>
-            {initialData.father_address?.address1}, <br />
-            {initialData.father_address?.address2}, <br />
-            {initialData.father_address?.address3}, <br />
-            {initialData.father_address?.city}
+            {initialData.permanent_address?.address1} <br />
+            {initialData.permanent_address?.address2} <br />
+            {initialData.permanent_address?.address3} <br />
+            {initialData.permanent_address?.city}
           </Descriptions.Item>
         </Descriptions>
         <div class='ant-descriptions ant-descriptions-bordered'>

@@ -5,6 +5,8 @@ import { Divider, Row, Col } from 'antd';
 import { EyeFilled, PhoneFilled, MessageFilled } from '@ant-design/icons';
 
 import { StyledButton } from '../../../style/commonStyle';
+import { APPLICATION_SCRUTINY, JOB_POSTING_T, JOB_POSTING_P, ADMIN } from '../../../static/constants/userRoles';
+import useUser from '../../../src/components/auth/useUser';
 
 const styles = {
   mainSection: {
@@ -125,6 +127,9 @@ const dashboardData = [
 
 const JobPostDashboard = ({ type }) => {
   const router = useRouter();
+  const { roles } = useUser({});
+
+  const userRole = roles && roles.length ? roles : '';
 
   return (
     <div style={styles.container}>
@@ -151,12 +156,21 @@ const JobPostDashboard = ({ type }) => {
           })}
       </div>
       <div style={styles.button}>
-        <StyledButton type='primary' onClick={() => router.push(`${type}/list`)}>
-          Job Posts
-        </StyledButton>
-        <StyledButton type='primary' onClick={() => router.push(`${type}/add`)}>
-          New Notifications
-        </StyledButton>
+        {type === 'temporary' && [JOB_POSTING_T, APPLICATION_SCRUTINY].some((r) => userRole.indexOf(r) >= 0) && (
+          <StyledButton type='primary' onClick={() => router.push(`${type}/list`)}>
+            Job Posts
+          </StyledButton>
+        )}
+        {type === 'permanent' && [APPLICATION_SCRUTINY, JOB_POSTING_P].some((r) => userRole.indexOf(r) >= 0) && (
+          <StyledButton type='primary' onClick={() => router.push(`${type}/list`)}>
+            Job Posts
+          </StyledButton>
+        )}
+        {[JOB_POSTING_P, JOB_POSTING_T].some((r) => userRole.indexOf(r) >= 0) && (
+          <StyledButton type='primary' onClick={() => router.push(`${type}/add`)}>
+            New Notifications
+          </StyledButton>
+        )}
         <StyledButton type='primary' onClick={() => router.push('/admin/reports')}>
           Reports
         </StyledButton>

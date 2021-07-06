@@ -2,15 +2,22 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-
-import { Row, Col } from 'antd';
+import moment from 'moment';
+import draftToHtml from 'draftjs-to-html';
+// Components
+import { Descriptions, Typography, Divider } from 'antd';
 import Box from '@iso/components/utility/box';
 import Table from '@iso/components/uielements/table';
 import Button from '@iso/ui/Antd/Button/Button';
+import PageHeader from '@iso/components/utility/pageHeader';
 import LayoutWrapper from '@iso/components/utility/layoutWrapper';
-
 import DashboardLayout from '../../containers/DashboardLayout/DashboardLayout';
+// Hooks / API Calls / Helper functions
 import useUser from '../../src/components/auth/useUser';
+import { createMarkup } from '../../src/helper';
+// Styles
+import JobPostsStyles from '../../src/components/job-posts/JobPosts.styles';
+import { jobTypes } from '../../src/constants';
 
 const styles = {
   row: {
@@ -32,9 +39,10 @@ const ViewJobPosts = () => {
   const {
     query: { id },
   } = router;
+  const { Title } = Typography;
 
   const [positions, setPositions] = useState([]);
-  const [jobPostDetails, setJobPostDetails] = useState([]);
+  const [jobPostDetails, setJobPostDetails] = useState(null);
 
   const columns = [
     {
@@ -76,9 +84,6 @@ const ViewJobPosts = () => {
       });
 
       response &&
-        response.data &&
-        response.data.manpower_positions &&
-        response.data.manpower_positions.length &&
         response.data.manpower_positions.map((res) => {
           data.push({
             key: res.id,
@@ -92,72 +97,82 @@ const ViewJobPosts = () => {
       setPositions(data);
     };
     if (user && user.isLoggedIn) load();
-  }, []);
+  }, [user]);
+
+  if (!jobPostDetails) return null;
 
   return (
     <>
       <Head>
-        <title>View Job Post</title>
+        <title>Job Post Details</title>
       </Head>
-      <DashboardLayout>
-        <LayoutWrapper>
-          <Box>
-            <Row gutter={[16, 12]}>
-              <Col span={24}>
-                <b>{jobPostDetails.job_posting_id}</b>
-              </Col>
-              <Col span={8}>
-                <b>Recruitment type:</b> {jobPostDetails.job_type}
-              </Col>
-              <Col span={8}>
-                <b>Start Date:</b> {jobPostDetails.publication_date}
-              </Col>
-              <Col span={8}>
-                <b>End Date:</b> {jobPostDetails.end_date}
-              </Col>
-            </Row>
-          </Box>
-          <Box>
-            <p className='isoDescription'>{jobPostDetails.description}</p>
-            <Table dataSource={positions} columns={columns} rowSelection={{ type: 'checkbox' }} />
-            <p>
-              TBD: B. Selection Process A Selection Committee of the following composition (minimum) would be
-              constituted by the Head of the local Institution for selection of the candidate/s: Selection Committee for
-              ProIect Assistants / Associates 1) Dean R&D or nominee 2) Dean R&D or nominee 3) Dean R&D or nominee 4)
-              Dean R&D or nominee Selection Committee for Project Scientists / Coordinator / Manager 1) Dean R&D or
-              nominee 2) Dean R&D or nominee 3) Dean R&D or nominee 4) Dean R&D or nominee C. Service conditions of
-              Scientific / Technical manpower (i) DA & CCA: Scientific / Technical Manpower in projects are not entitled
-              to DA & CCA. (ii) House Rent Allowance (HRA)· HRA Is allowed to all categories, except for Project
-              Investigator (Pl) / Project Coordinators in Non-Governmental I Voluntary Organizations (NGONO) I Project
-              Manager as per Central Government norms applicable in the city/location where they are working. The
-              percentage required for calculating HRA will be based on the remuneration. (iii) Medical Benefits: The
-              Scientific I Technical manpower will be entitled for medical benefits as applicable in the implementing
-              institution (iv) Leave and other entitlements The Scientific/ Technical manpower are entitled to leave as
-              per rules of the host institution Maternity leave as per the Govt. of India instructions issued from time
-              to time would be available to all categories. The travel entitlement is as per Institute norms. (v) Bonus,
-              Gratuity & Leave Travel Concession: The Scientific/ Technical manpower will not be entitled to these
-              allowances.
-            </p>
-            <div style={styles.button}>
-              <Button type='primary' shape='round'>
-                Apply for Job Post
-              </Button>
-              <Button
-                type='default'
-                shape='round'
-                style={{ marginLeft: '10px' }}
-                onClick={() => {
-                  router.push({
-                    pathname: '/job-posts',
-                  });
-                }}
-              >
-                Go Back
-              </Button>
-            </div>
-          </Box>
-        </LayoutWrapper>
-      </DashboardLayout>
+      <JobPostsStyles>
+        <DashboardLayout>
+          <LayoutWrapper>
+            <PageHeader>Job Post Details</PageHeader>
+            <Box>
+              <Descriptions bordered stylle={{ marginBottom: 20 }}>
+                <Descriptions.Item label='Notification ID' span={3}>
+                  {jobPostDetails.notification_id}
+                </Descriptions.Item>
+                <Descriptions.Item label='Notification Title' span={3}>
+                  {jobPostDetails.notification_title}
+                </Descriptions.Item>
+                <Descriptions.Item label='Recruitment type' span={2}>
+                  {jobTypes[jobPostDetails.job_type]}
+                </Descriptions.Item>
+                <Descriptions.Item label='Divison / Zonal' span={2}>
+                  {jobPostDetails.division.division_name} / {jobPostDetails.zonal_lab.zonal_lab_name}
+                </Descriptions.Item>
+                <Descriptions.Item label='Opening Date' span={2}>
+                  {moment(jobPostDetails.publication_date).format('DD-MM-YYYY')}
+                </Descriptions.Item>
+                <Descriptions.Item label='Closing Date' span={2}>
+                  {moment(jobPostDetails.end_date).format('DD-MM-YYYY')}
+                </Descriptions.Item>
+              </Descriptions>
+            </Box>
+            <Box>
+              <div
+                className='isoDescription'
+                dangerouslySetInnerHTML={createMarkup(draftToHtml(JSON.parse(jobPostDetails.pre_ad_description)))}
+              />
+              <Divider />
+              <Title level={4}>Positions</Title>
+              <Table
+                bordered
+                dataSource={positions}
+                columns={columns}
+                rowSelection={{ type: 'checkbox' }}
+                pagination={false}
+              />
+              <Divider />
+              <div
+                className='isoDescription'
+                dangerouslySetInnerHTML={createMarkup(draftToHtml(JSON.parse(jobPostDetails.post_ad_description)))}
+              />
+              <Divider />
+              <div style={styles.button}>
+                <Button type='primary' shape='round'>
+                  Apply for Job Post
+                </Button>
+                <Button
+                  type='default'
+                  shape='round'
+                  style={{ marginLeft: '10px' }}
+                  onClick={() => {
+                    router.push({
+                      pathname: '/job-posts',
+                    });
+                  }}
+                >
+                  Go Back
+                </Button>
+              </div>
+            </Box>
+          </LayoutWrapper>
+        </DashboardLayout>
+      </JobPostsStyles>
     </>
   );
 };

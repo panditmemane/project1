@@ -59,6 +59,10 @@ const WDContactsWrapper = styled.div`
       height: calc(100vh - 225px) !important;
     }
 
+    .action-bar {
+      padding: 16px;
+    }
+
     .isoContactControl {
       width: 100%;
       display: flex;
@@ -85,10 +89,8 @@ const WDContactsWrapper = styled.div`
         outline: 0;
         padding: 0;
         border: 1px solid ${palette('border', 0)};
-        margin-left: ${(props) =>
-          props['data-rtl'] === 'rtl' ? 'inherit' : '-1px'};
-        margin-right: ${(props) =>
-          props['data-rtl'] === 'rtl' ? '-1px' : 'inherit'};
+        margin-left: ${(props) => (props['data-rtl'] === 'rtl' ? 'inherit' : '-1px')};
+        margin-right: ${(props) => (props['data-rtl'] === 'rtl' ? '-1px' : 'inherit')};
         cursor: pointer;
         ${borderRadius()};
         ${transition()};
@@ -98,10 +100,8 @@ const WDContactsWrapper = styled.div`
         }
 
         &:first-child {
-          margin-left: ${(props) =>
-            props['data-rtl'] === 'rtl' ? 'inherit' : '0'};
-          margin-right: ${(props) =>
-            props['data-rtl'] === 'rtl' ? '0' : 'inherit'};
+          margin-left: ${(props) => (props['data-rtl'] === 'rtl' ? 'inherit' : '0')};
+          margin-right: ${(props) => (props['data-rtl'] === 'rtl' ? '0' : 'inherit')};
         }
 
         &:hover {
@@ -115,10 +115,8 @@ const WDContactsWrapper = styled.div`
         border: 0;
         height: 30px;
         padding: 0 15px;
-        margin-left: ${(props) =>
-          props['data-rtl'] === 'rtl' ? 'inherit' : 'auto'};
-        margin-right: ${(props) =>
-          props['data-rtl'] === 'rtl' ? 'auto' : 'inherit'};
+        margin-left: ${(props) => (props['data-rtl'] === 'rtl' ? 'inherit' : 'auto')};
+        margin-right: ${(props) => (props['data-rtl'] === 'rtl' ? 'auto' : 'inherit')};
         ${borderRadius('3px')};
         ${transition()};
 

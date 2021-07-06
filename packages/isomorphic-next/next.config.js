@@ -13,6 +13,7 @@ const withFonts = require('next-fonts');
 const withCSS = require('@zeit/next-css');
 const withSass = require('@zeit/next-sass');
 const withBundleAnalyzer = require('@zeit/next-bundle-analyzer');
+const withDraftJs = require('draft-js');
 
 // next.js custom configuration goes here
 const nextConfig = {
@@ -44,6 +45,7 @@ module.exports = withPlugins(
     withFonts,
     withSass,
     withCSS,
+    withDraftJs,
     [
       withBundleAnalyzer,
       {
